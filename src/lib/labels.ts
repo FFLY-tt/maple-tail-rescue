@@ -57,6 +57,11 @@ export function getAgeLabel(animal: Pick<Animal, "ageGroup" | "species">): strin
     : AGE_LABELS[animal.ageGroup];
 }
 
+/** Species-agnostic age label, for filters where no single animal is involved. */
+export function getAgeGroupLabel(ageGroup: AgeGroup): string {
+  return ageGroup === "baby" ? "Puppy / Kitten" : AGE_LABELS[ageGroup];
+}
+
 export function getSizeLabel(size: Size): string {
   return SIZE_LABELS[size];
 }
@@ -72,3 +77,8 @@ export function getGoodWithLabel(goodWith: GoodWith): string {
 export function getStatusLabel(status: AdoptionStatus): string {
   return STATUS_LABELS[status];
 }
+
+/** Option lists in display order, for filters and forms. */
+export const SPECIES_VALUES: readonly Species[] = ["dog", "cat"];
+export const AGE_GROUP_VALUES: readonly AgeGroup[] = ["baby", "young", "adult", "senior"];
+export const SIZE_VALUES: readonly Size[] = ["small", "medium", "large"];

@@ -1,49 +1,25 @@
-import Image from "next/image";
+import type { Metadata } from "next";
 
-import { StatusBadge } from "@/components/StatusBadge";
-import animalsData from "@/data/animals.json";
-import { sortAnimals } from "@/lib/animals";
-import { getAgeLabel, getSpeciesLabel } from "@/lib/labels";
-import type { Animal } from "@/types/animal";
+import { AnimalBrowser } from "@/components/animals/AnimalBrowser";
+import { Container } from "@/components/ui/Container";
+import { allAnimals } from "@/lib/animal-data";
 
-const animals = sortAnimals(animalsData as Animal[]);
-
-export const metadata = {
-  title: "Animals",
+export const metadata: Metadata = {
+  title: "Our animals",
+  description: "Meet the dogs and cats looking for their forever homes at Maple Tail Rescue.",
 };
 
 export default function AnimalsPage() {
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <h1 className="mb-6 text-3xl font-bold">Animals</h1>
-      {animals.length === 0 ? (
-        <p>No animals yet. Run `npm run sync`.</p>
-      ) : (
-        <ul className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
-          {animals.map((animal) => (
-            <li key={animal.id} className="overflow-hidden rounded-lg border border-stone-300 bg-white">
-              {animal.photos[0] ? (
-                <Image
-                  src={animal.photos[0]}
-                  alt={animal.name}
-                  width={400}
-                  height={400}
-                  className="aspect-square w-full object-cover"
-                />
-              ) : (
-                <div className="aspect-square w-full bg-stone-200" />
-              )}
-              <div className="p-3">
-                <h2 className="text-lg font-semibold">{animal.name}</h2>
-                <p className="mb-2 text-sm">
-                  {getSpeciesLabel(animal.species)} · {getAgeLabel(animal)}
-                </p>
-                <StatusBadge status={animal.status} />
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+    <Container className="pt-10 pb-16">
+      <h1 className="font-display text-4xl font-bold">Our animals</h1>
+      <p className="mt-2 max-w-2xl text-lg text-muted">
+        Every animal here is living in a foster home right now. Tap a card to
+        read their story and see how to meet them.
+      </p>
+      <div className="mt-8">
+        <AnimalBrowser animals={allAnimals} />
+      </div>
+    </Container>
   );
 }
