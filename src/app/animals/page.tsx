@@ -1,9 +1,12 @@
 import Image from "next/image";
 
+import { StatusBadge } from "@/components/StatusBadge";
 import animalsData from "@/data/animals.json";
+import { sortAnimals } from "@/lib/animals";
+import { getAgeLabel, getSpeciesLabel } from "@/lib/labels";
 import type { Animal } from "@/types/animal";
 
-const animals = animalsData as Animal[];
+const animals = sortAnimals(animalsData as Animal[]);
 
 export const metadata = {
   title: "Animals",
@@ -18,7 +21,7 @@ export default function AnimalsPage() {
       ) : (
         <ul className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
           {animals.map((animal) => (
-            <li key={animal.id} className="overflow-hidden rounded-lg border">
+            <li key={animal.id} className="overflow-hidden rounded-lg border border-stone-300 bg-white">
               {animal.photos[0] ? (
                 <Image
                   src={animal.photos[0]}
@@ -28,14 +31,14 @@ export default function AnimalsPage() {
                   className="aspect-square w-full object-cover"
                 />
               ) : (
-                <div className="aspect-square w-full bg-gray-200" />
+                <div className="aspect-square w-full bg-stone-200" />
               )}
               <div className="p-3">
                 <h2 className="text-lg font-semibold">{animal.name}</h2>
-                <p className="text-sm capitalize">
-                  {animal.species} · {animal.ageGroup}
+                <p className="mb-2 text-sm">
+                  {getSpeciesLabel(animal.species)} · {getAgeLabel(animal)}
                 </p>
-                <p className="text-sm capitalize">{animal.status}</p>
+                <StatusBadge status={animal.status} />
               </div>
             </li>
           ))}
