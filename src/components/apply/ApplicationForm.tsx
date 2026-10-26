@@ -6,11 +6,11 @@ import { useEffect, useRef, useState } from "react";
 import { useForm, type FieldErrors } from "react-hook-form";
 
 import { ApplicationSuccess } from "@/components/apply/ApplicationSuccess";
+import { StepAnimal } from "@/components/apply/StepAnimal";
 import { StepApplicant } from "@/components/apply/StepApplicant";
-import { StepExperience } from "@/components/apply/StepExperience";
 import { StepHome } from "@/components/apply/StepHome";
 import { StepIndicator } from "@/components/apply/StepIndicator";
-import { StepReview } from "@/components/apply/StepReview";
+import { StepPets } from "@/components/apply/StepPets";
 import type { ApplyAnimal } from "@/components/apply/types";
 import { Button } from "@/components/ui/Button";
 import {
@@ -22,8 +22,8 @@ import {
 const STEP_TITLES = [
   "About you",
   "Home and household",
-  "Experience and animal",
-  "Review and submit",
+  "Pets and experience",
+  "Your match",
 ] as const;
 
 const LAST_STEP = STEP_TITLES.length - 1;
@@ -40,15 +40,10 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
       fullName: "",
       email: "",
       phone: "",
-      city: "",
-      isAdult: false,
-      childrenAges: "",
-      otherPets: "",
+      currentPets: "",
+      experience: "",
       animalSlug: preselected ?? "",
-      whyAdopt: "",
-      vetReference: "",
-      homeVisitOk: false,
-      confirmAccurate: false,
+      whyInterested: "",
     },
   });
 
@@ -100,7 +95,7 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
       <ApplicationSuccess
         applicantName={submitted.fullName}
         email={submitted.email}
-        animalName={animal?.name}
+        animal={animal}
       />
     );
   }
@@ -129,8 +124,8 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
 
         {step === 0 && <StepApplicant form={form} />}
         {step === 1 && <StepHome form={form} />}
-        {step === 2 && <StepExperience form={form} animals={animals} />}
-        {step === 3 && <StepReview form={form} animals={animals} onEdit={goTo} />}
+        {step === 2 && <StepPets form={form} />}
+        {step === 3 && <StepAnimal form={form} animals={animals} />}
       </div>
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">

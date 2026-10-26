@@ -2,15 +2,18 @@
 
 import { useEffect, useRef } from "react";
 
+import { AdoptionSteps } from "@/components/adoption/AdoptionSteps";
+import type { ApplyAnimal } from "@/components/apply/types";
 import { ButtonLink } from "@/components/ui/Button";
 
 type ApplicationSuccessProps = {
   applicantName: string;
   email: string;
-  animalName?: string;
+  /** The animal that was applied for; omitted for a general application. */
+  animal?: ApplyAnimal;
 };
 
-export function ApplicationSuccess({ applicantName, email, animalName }: ApplicationSuccessProps) {
+export function ApplicationSuccess({ applicantName, email, animal }: ApplicationSuccessProps) {
   const firstName = applicantName.split(" ")[0];
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -20,30 +23,44 @@ export function ApplicationSuccess({ applicantName, email, animalName }: Applica
   }, []);
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-8 text-center">
-      <p className="text-5xl" aria-hidden="true">
-        🎉
-      </p>
-      <h2
-        ref={headingRef}
-        tabIndex={-1}
-        className="mt-4 font-display text-3xl font-bold outline-none"
-      >
-        Thank you, {firstName}!
-      </h2>
-      <p className="mx-auto mt-3 max-w-md text-lg">
-        {animalName
-          ? `We’ve received your application for ${animalName}.`
-          : "We’ve received your application."}{" "}
-        A volunteer will email you at <strong className="break-all">{email}</strong>{" "}
-        within a few days to set up a chat.
-      </p>
-      <p className="mx-auto mt-3 max-w-md text-sm text-muted">
-        This is a demo, so nothing has actually been sent.
-      </p>
+    <div className="rounded-2xl border border-border bg-surface p-5 sm:p-8">
+      <div className="text-center">
+        <p className="text-5xl" aria-hidden="true">
+          🎉
+        </p>
+        <h2
+          ref={headingRef}
+          tabIndex={-1}
+          className="mt-4 font-display text-3xl font-bold outline-none"
+        >
+          Thank you, {firstName}!
+        </h2>
+        <p className="mx-auto mt-3 max-w-md text-lg">
+          {animal
+            ? `We’ve received your application for ${animal.name}.`
+            : "We’ve received your application."}{" "}
+          A volunteer will email you at <strong className="break-all">{email}</strong>{" "}
+          within a few days to set up a phone chat.
+        </p>
+        <p className="mx-auto mt-3 max-w-md text-sm text-muted">
+          This is a demo, so nothing has actually been sent.
+        </p>
+      </div>
+
+      <section aria-labelledby="next-heading" className="mt-8">
+        <h3 id="next-heading" className="mb-4 font-display text-2xl font-bold">
+          What happens next
+        </h3>
+        <AdoptionSteps layout="list" completedSteps={1} titleTag="h4" />
+      </section>
+
       <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <ButtonLink href="/animals">Keep browsing animals</ButtonLink>
-        <ButtonLink href="/" variant="secondary">
+        {animal && (
+          <ButtonLink href={`/animals/${animal.slug}`}>
+            Back to {animal.name}&rsquo;s page
+          </ButtonLink>
+        )}
+        <ButtonLink href="/" variant={animal ? "secondary" : "primary"}>
           Back to home
         </ButtonLink>
       </div>

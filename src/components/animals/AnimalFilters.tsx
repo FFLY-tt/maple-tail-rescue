@@ -18,6 +18,16 @@ export type Filters = {
 
 export const NO_FILTERS: Filters = { species: "all", ageGroup: "all", size: "all" };
 
+/** Cat sizes vary little, so the Size filter only applies to dogs and "all species". */
+export function sizeFilterApplies(filters: Pick<Filters, "species">) {
+  return filters.species !== "cat";
+}
+
+/** The filters that actually narrow the list: a size picked earlier is ignored for cats. */
+export function effectiveFilters(filters: Filters): Filters {
+  return sizeFilterApplies(filters) ? filters : { ...filters, size: "all" };
+}
+
 type FilterSelectProps<T extends string> = {
   id: string;
   label: string;
@@ -63,8 +73,14 @@ type AnimalFiltersProps = {
 };
 
 export function AnimalFilters({ filters, onChange }: AnimalFiltersProps) {
+  const showSize = sizeFilterApplies(filters);
+
   return (
-    <fieldset className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-surface p-4 min-[480px]:grid-cols-3">
+    <fieldset
+      className={`grid grid-cols-1 gap-4 rounded-2xl border border-border bg-surface p-4 ${
+        showSize ? "min-[480px]:grid-cols-3" : "min-[480px]:grid-cols-2"
+      }`}
+    >
       <legend className="px-2 text-sm font-semibold text-muted">Filter animals</legend>
       <FilterSelect
         id="filter-species"
@@ -82,14 +98,16 @@ export function AnimalFilters({ filters, onChange }: AnimalFiltersProps) {
         options={AGE_GROUP_VALUES.map((value) => ({ value, label: getAgeGroupLabel(value) }))}
         onChange={(ageGroup) => onChange({ ...filters, ageGroup })}
       />
-      <FilterSelect
-        id="filter-size"
-        label="Size"
-        allLabel="All sizes"
-        value={filters.size}
-        options={SIZE_VALUES.map((value) => ({ value, label: getSizeLabel(value) }))}
-        onChange={(size) => onChange({ ...filters, size })}
-      />
+      {showSize && (
+        <FilterSelect
+          id="filter-size"
+          label="Size"
+          allLabel="All sizes"
+          value={filters.size}
+          options={SIZE_VALUES.map((value) => ({ value, label: getSizeLabel(value) }))}
+          onChange={(size) => onChange({ ...filters, size })}
+        />
+      )}
     </fieldset>
   );
 }

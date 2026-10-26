@@ -1,17 +1,14 @@
-import { FeaturedAnimals } from "@/components/home/FeaturedAnimals";
 import { Hero } from "@/components/home/Hero";
 import { HowAdoptionWorks } from "@/components/home/HowAdoptionWorks";
 import { allAnimals } from "@/lib/animal-data";
 
 export default function Home() {
-  // allAnimals is already sorted; the hero shows the first available animal
-  // and the row below shows the next three, so nobody appears twice.
-  const [spotlight, ...rest] = allAnimals.filter((animal) => animal.status === "available");
+  // allAnimals is already sorted (available, then pending); adopted animals aren't looking for homes.
+  const carouselAnimals = allAnimals.filter((animal) => animal.status !== "adopted");
 
   return (
     <>
-      <Hero spotlight={spotlight} />
-      <FeaturedAnimals animals={rest.slice(0, 3)} />
+      <Hero animals={carouselAnimals} />
       <HowAdoptionWorks />
     </>
   );

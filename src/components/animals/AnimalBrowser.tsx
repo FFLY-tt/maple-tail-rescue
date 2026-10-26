@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { AnimalFilters, NO_FILTERS, type Filters } from "@/components/animals/AnimalFilters";
+import { AnimalFilters, NO_FILTERS, effectiveFilters, type Filters } from "@/components/animals/AnimalFilters";
 import { AnimalGrid } from "@/components/animals/AnimalGrid";
 import { Button } from "@/components/ui/Button";
 import type { Animal } from "@/types/animal";
@@ -19,8 +19,9 @@ function matches(animal: Animal, filters: Filters) {
 export function AnimalBrowser({ animals }: { animals: readonly Animal[] }) {
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
 
-  const visible = animals.filter((animal) => matches(animal, filters));
-  const isFiltered = Object.values(filters).some((value) => value !== "all");
+  const active = effectiveFilters(filters);
+  const visible = animals.filter((animal) => matches(animal, active));
+  const isFiltered = Object.values(active).some((value) => value !== "all");
 
   return (
     <div className="space-y-6">

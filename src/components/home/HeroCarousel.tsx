@@ -1,0 +1,233 @@
+"use client";
+
+import Image from "next/image";
+import { useEffect, useState, useSyncExternalStore, type FocusEvent, type PointerEvent } from "react";
+
+import { PhotoPlaceholder } from "@/components/animals/PhotoPlaceholder";
+import { StatusBadge } from "@/components/StatusBadge";
+import { ButtonLink } from "@/components/ui/Button";
+import { getAgeLabel, getSpeciesLabel } from "@/lib/labels";
+import type { Animal } from "@/types/animal";
+
+const SLIDE_MS = 5000;
+
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
+function subscribeReducedMotion(onChange: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+/** False on the server and during hydration, so the first render is the same everywhere. */
+function useReducedMotion() {
+  return useSyncExternalStore(
+    subscribeReducedMotion,
+    () => window.matchMedia(REDUCED_MOTION).matches,
+    () => false,
+  );
+}
+
+const ICON_BUTTON =
+  "inline-flex h-11 min-w-11 items-center justify-center rounded-full border-2 border-primary text-primary transition-colors hover:bg-primary-soft";
+
+function Icon({ path }: { path: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" className="size-5" fill="currentColor">
+      <path d={path} />
+    </svg>
+  );
+}
+
+const PREV_ICON = "M12.5 3.5 6 10l6.5 6.5 1.5-1.5L9 10l5-5z";
+const NEXT_ICON = "M7.5 3.5 6 5l5 5-5 5 1.5 1.5L14 10z";
+const PAUSE_ICON = "M5 3h4v14H5zM11 3h4v14h-4z";
+const PLAY_ICON = "M6 3.5v13L16.5 10z";
+
+/**
+ * Rotates through every animal it is given, one after another, so each gets
+ * the same screen time. The first render always shows animals[0] (the page is
+ * statically exported); a random start is picked after mount.
+ */
+export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
+  const count = animals.length;
+  const reducedMotion = useReducedMotion();
+
+  const [index, setIndex] = useState(0);
+  // Slides only fade once the visitor or the timer has changed them, so the
+  // jump to a random start slide after mount is not animated.
+  const [animate, setAnimate] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [keyboardFocused, setKeyboardFocused] = useState(false);
+  // Only set by manual navigation; cleared by auto-advance so it stays silent.
+  const [announcement, setAnnouncement] = useState("");
+
+  const autoAdvance = count > 1 && !reducedMotion && !userPaused && !hovered && !keyboardFocused;
+
+  // Equal time for everyone: start anywhere, not always on the first animal.
+  // Every slide is stacked in the same grid cell, so this causes no layout shift.
+  useEffect(() => {
+    if (count > 1) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- must run after mount to keep the first render deterministic
+      setIndex(Math.floor(Math.random() * count));
+    }
+  }, [count]);
+
+  // A fresh timeout per slide (and per resume) gives each slide a full interval.
+  useEffect(() => {
+    if (!autoAdvance) return;
+    const timer = setTimeout(() => {
+      setAnimate(true);
+      setAnnouncement("");
+      setIndex((current) => (current + 1) % count);
+    }, SLIDE_MS);
+    return () => clearTimeout(timer);
+  }, [autoAdvance, index, count]);
+
+  if (count === 0) return null;
+
+  function showSlide(target: number) {
+    const next = (target + count) % count;
+    const animal = animals[next];
+    setAnimate(true);
+    setIndex(next);
+    setAnnouncement(
+      `${animal.name}, ${getSpeciesLabel(animal.species).toLowerCase()}, ${getAgeLabel(animal).toLowerCase()}. Slide ${next + 1} of ${count}.`,
+    );
+  }
+
+  // Mouse only: touch "hover" is sticky and would leave the carousel paused.
+  const onPointerEnter = (event: PointerEvent) => event.pointerType === "mouse" && setHovered(true);
+  const onPointerLeave = (event: PointerEvent) => event.pointerType === "mouse" && setHovered(false);
+
+  // Pause for keyboard focus only. A mouse click also focuses a button, and
+  // that must not leave the carousel paused after the pointer moves away.
+  const onFocus = (event: FocusEvent<HTMLElement>) => {
+    if (event.target.matches(":focus-visible")) setKeyboardFocused(true);
+  };
+  const onBlur = (event: FocusEvent<HTMLElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) setKeyboardFocused(false);
+  };
+
+  return (
+    <section
+      aria-roledescription="carousel"
+      aria-label="Animals looking for homes"
+      className="mx-auto w-full max-w-sm md:max-w-md"
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+      onFocus={onFocus}
+      onBlur={onBlur}
+    >
+      {/* All slides share one grid cell, so the carousel keeps the height of the tallest. */}
+      <div className="grid">
+        {animals.map((animal, i) => {
+          const active = i === index;
+          const photo = animal.photos[0];
+          return (
+            <div
+              key={animal.id}
+              role="group"
+              aria-roledescription="slide"
+              aria-label={`${i + 1} of ${count}`}
+              inert={!active}
+              className={`col-start-1 row-start-1 ${
+                animate ? "transition-opacity duration-500 motion-reduce:transition-none" : ""
+              } ${active ? "opacity-100" : "pointer-events-none opacity-0"}`}
+            >
+              <div className="aspect-[4/5] overflow-hidden rounded-3xl border border-border bg-surface shadow-md">
+                {photo ? (
+                  <Image
+                    src={photo}
+                    alt={`Photo of ${animal.name}`}
+                    width={800}
+                    height={1000}
+                    preload={i === 0}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <PhotoPlaceholder name={animal.name} />
+                )}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <p className="font-display text-2xl font-bold leading-tight">{animal.name}</p>
+                    <StatusBadge status={animal.status} />
+                  </div>
+                  <p className="mt-1 text-muted">
+                    {getSpeciesLabel(animal.species)} · {getAgeLabel(animal)}
+                  </p>
+                </div>
+                <ButtonLink href={`/animals/${animal.slug}`} variant="secondary">
+                  Meet {animal.name}
+                </ButtonLink>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {count > 1 && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Previous animal"
+              onClick={() => showSlide(index - 1)}
+              className={ICON_BUTTON}
+            >
+              <Icon path={PREV_ICON} />
+            </button>
+            {/* Nothing rotates under reduced motion, so there is nothing to pause. */}
+            {!reducedMotion && (
+              <button
+                type="button"
+                aria-label={userPaused ? "Start automatic slide rotation" : "Pause automatic slide rotation"}
+                onClick={() => setUserPaused((paused) => !paused)}
+                className={`${ICON_BUTTON} gap-2 px-4 font-semibold`}
+              >
+                <Icon path={userPaused ? PLAY_ICON : PAUSE_ICON} />
+                <span aria-hidden="true">{userPaused ? "Play" : "Pause"}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label="Next animal"
+              onClick={() => showSlide(index + 1)}
+              className={ICON_BUTTON}
+            >
+              <Icon path={NEXT_ICON} />
+            </button>
+          </div>
+
+          <div role="group" aria-label="Choose an animal" className="flex items-center">
+            {animals.map((animal, i) => (
+              <button
+                key={animal.id}
+                type="button"
+                aria-label={`Show ${animal.name}, ${i + 1} of ${count}`}
+                aria-current={i === index ? "true" : undefined}
+                onClick={() => showSlide(i)}
+                className="group flex size-8 items-center justify-center rounded-full"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`block size-3 rounded-full border-2 border-primary transition-colors ${
+                    i === index ? "bg-primary" : "bg-transparent group-hover:bg-primary-soft"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Always polite, but only ever filled in by manual navigation. */}
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
+    </section>
+  );
+}

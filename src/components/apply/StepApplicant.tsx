@@ -1,4 +1,4 @@
-import { CheckboxField, TextField } from "@/components/apply/fields";
+import { TextField } from "@/components/apply/fields";
 import type { StepProps } from "@/components/apply/types";
 
 export function StepApplicant({ form }: StepProps) {
@@ -25,20 +25,8 @@ export function StepApplicant({ form }: StepProps) {
         type="tel"
         autoComplete="tel"
         inputMode="tel"
-        hint="We’ll call to chat about your application."
+        hint="A volunteer will call you to chat about your application."
         error={errors.phone?.message}
-      />
-      <TextField
-        registration={register("city")}
-        label="City"
-        autoComplete="address-level2"
-        hint="We adopt to the Greater Toronto Area."
-        error={errors.city?.message}
-      />
-      <CheckboxField
-        registration={register("isAdult")}
-        label="I am 18 years of age or older."
-        error={errors.isAdult?.message}
       />
     </div>
   );
