@@ -3,6 +3,7 @@ import { Fraunces, Nunito_Sans } from "next/font/google";
 
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SITE } from "@/content/site";
 import "./globals.css";
 
 const bodyFont = Nunito_Sans({
@@ -16,12 +17,26 @@ const headingFont = Fraunces({
 });
 
 export const metadata: Metadata = {
+  // Resolves relative image URLs in every page's metadata to absolute ones.
+  metadataBase: new URL(SITE.url),
   title: {
-    default: "Maple Tail Rescue | Dog and cat adoption in Toronto",
-    template: "%s | Maple Tail Rescue",
+    default: SITE.title,
+    template: `%s | ${SITE.name}`,
   },
-  description:
-    "Maple Tail Rescue is a small, foster-based dog and cat rescue in Toronto. Meet our animals and apply to adopt.",
+  description: SITE.description,
+  // A page that sets its own openGraph/twitter replaces these wholesale, not field by field.
+  openGraph: {
+    type: "website",
+    siteName: SITE.name,
+    locale: "en_CA",
+    title: SITE.title,
+    description: SITE.description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE.title,
+    description: SITE.description,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

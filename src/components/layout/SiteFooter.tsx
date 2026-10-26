@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { NAV_ITEMS } from "@/components/layout/nav-items";
+import { SocialLinks } from "@/components/layout/SocialLinks";
 import { Container } from "@/components/ui/Container";
 
 export function SiteFooter() {
@@ -13,6 +14,10 @@ export function SiteFooter() {
             A small, foster-based dog and cat rescue in Toronto, Ontario. Every
             animal spends time in a loving home before finding their forever one.
           </p>
+          <p className="mt-4 font-semibold">Follow us</p>
+          <div className="-ml-2.5 mt-1">
+            <SocialLinks />
+          </div>
         </div>
         <nav aria-label="Footer">
           <p className="font-semibold">Explore</p>

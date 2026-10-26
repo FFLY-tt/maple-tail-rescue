@@ -12,7 +12,8 @@ const VARIANTS: Record<Variant, string> = {
     "border-2 border-primary bg-transparent text-primary hover:bg-primary-soft",
 };
 
-function buttonClass(variant: Variant, className?: string) {
+/** Button styling for elements that are not <Button>/<ButtonLink> (e.g. external <a> links). */
+export function buttonClass(variant: Variant, className?: string) {
   return `${BASE} ${VARIANTS[variant]}${className ? ` ${className}` : ""}`;
 }
 
