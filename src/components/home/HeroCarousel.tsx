@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useSyncExternalStore, type FocusEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FocusEvent, type PointerEvent } from "react";
 
 import { PhotoPlaceholder } from "@/components/animals/PhotoPlaceholder";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -10,6 +10,9 @@ import { getAgeLabel, getSpeciesLabel } from "@/lib/labels";
 import type { Animal } from "@/types/animal";
 
 const SLIDE_MS = 5000;
+
+/** Horizontal distance (px) a touch must travel to count as a swipe. */
+const SWIPE_PX = 40;
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
@@ -28,12 +31,14 @@ function useReducedMotion() {
   );
 }
 
-const ICON_BUTTON =
-  "inline-flex h-11 min-w-11 items-center justify-center rounded-full border-2 border-primary text-primary transition-colors hover:bg-primary-soft";
+// Overlay controls: a translucent white disc, faint at rest and firmer once the
+// carousel is hovered or has focus inside (hover styles only apply on devices that hover).
+const OVERLAY_BUTTON =
+  "pointer-events-auto absolute flex items-center justify-center rounded-full bg-white/55 text-foreground shadow-md transition-colors hover:bg-white group-hover/carousel:bg-white/90 group-focus-within/carousel:bg-white/90";
 
-function Icon({ path }: { path: string }) {
+function Icon({ path, className = "size-5" }: { path: string; className?: string }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" className="size-5" fill="currentColor">
+    <svg aria-hidden="true" viewBox="0 0 20 20" className={className} fill="currentColor">
       <path d={path} />
     </svg>
   );
@@ -62,6 +67,7 @@ export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
   const [keyboardFocused, setKeyboardFocused] = useState(false);
   // Only set by manual navigation; cleared by auto-advance so it stays silent.
   const [announcement, setAnnouncement] = useState("");
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
   const autoAdvance = count > 1 && !reducedMotion && !userPaused && !hovered && !keyboardFocused;
 
@@ -110,119 +116,151 @@ export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
     if (!event.currentTarget.contains(event.relatedTarget)) setKeyboardFocused(false);
   };
 
+  // Touch/pen swipe. Mouse users have the arrow buttons, and a press that
+  // starts on a button or link is a tap, not a swipe.
+  const onSwipeStart = (event: PointerEvent) => {
+    const onControl = (event.target as Element).closest("button, a");
+    swipeStart.current =
+      event.pointerType === "mouse" || onControl ? null : { x: event.clientX, y: event.clientY };
+  };
+  const onSwipeEnd = (event: PointerEvent) => {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dx) >= SWIPE_PX && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      showSlide(index + (dx < 0 ? 1 : -1));
+    }
+  };
+
   return (
     <section
       aria-roledescription="carousel"
       aria-label="Animals looking for homes"
-      className="mx-auto w-full max-w-sm md:max-w-md"
+      className="group/carousel mx-auto w-full max-w-sm md:max-w-md"
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       onFocus={onFocus}
       onBlur={onBlur}
     >
-      {/* All slides share one grid cell, so the carousel keeps the height of the tallest. */}
-      <div className="grid">
-        {animals.map((animal, i) => {
-          const active = i === index;
-          const photo = animal.photos[0];
-          return (
-            <div
-              key={animal.id}
-              role="group"
-              aria-roledescription="slide"
-              aria-label={`${i + 1} of ${count}`}
-              inert={!active}
-              className={`col-start-1 row-start-1 ${
-                animate ? "transition-opacity duration-500 motion-reduce:transition-none" : ""
-              } ${active ? "opacity-100" : "pointer-events-none opacity-0"}`}
-            >
-              <div className="aspect-[4/5] overflow-hidden rounded-3xl border border-border bg-surface shadow-md">
-                {photo ? (
-                  <Image
-                    src={photo}
-                    alt={`Photo of ${animal.name}`}
-                    width={800}
-                    height={1000}
-                    preload={i === 0}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <PhotoPlaceholder name={animal.name} />
-                )}
-              </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <p className="font-display text-2xl font-bold leading-tight">{animal.name}</p>
-                    <StatusBadge status={animal.status} />
-                  </div>
-                  <p className="mt-1 text-muted">
-                    {getSpeciesLabel(animal.species)} · {getAgeLabel(animal)}
-                  </p>
-                </div>
-                <ButtonLink href={`/animals/${animal.slug}`} variant="secondary">
-                  Meet {animal.name}
-                </ButtonLink>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {count > 1 && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div className="flex items-center gap-2">
+      {/* touch-pan-y: vertical scrolling stays native, horizontal drags reach the swipe handlers. */}
+      <div
+        className="relative touch-pan-y"
+        onPointerDown={onSwipeStart}
+        onPointerUp={onSwipeEnd}
+        onPointerCancel={() => (swipeStart.current = null)}
+      >
+        {/* Controls sit over the photo, which is the top 4:5 of every slide. They
+            come first in the DOM so they are first in the tab order. */}
+        {count > 1 && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 aspect-[4/5]">
             <button
               type="button"
               aria-label="Previous animal"
               onClick={() => showSlide(index - 1)}
-              className={ICON_BUTTON}
+              className={`${OVERLAY_BUTTON} left-2 top-1/2 size-10 -translate-y-1/2`}
             >
               <Icon path={PREV_ICON} />
             </button>
-            {/* Nothing rotates under reduced motion, so there is nothing to pause. */}
-            {!reducedMotion && (
-              <button
-                type="button"
-                aria-label={userPaused ? "Start automatic slide rotation" : "Pause automatic slide rotation"}
-                onClick={() => setUserPaused((paused) => !paused)}
-                className={`${ICON_BUTTON} gap-2 px-4 font-semibold`}
-              >
-                <Icon path={userPaused ? PLAY_ICON : PAUSE_ICON} />
-                <span aria-hidden="true">{userPaused ? "Play" : "Pause"}</span>
-              </button>
-            )}
             <button
               type="button"
               aria-label="Next animal"
               onClick={() => showSlide(index + 1)}
-              className={ICON_BUTTON}
+              className={`${OVERLAY_BUTTON} right-2 top-1/2 size-10 -translate-y-1/2`}
             >
               <Icon path={NEXT_ICON} />
             </button>
-          </div>
 
-          <div role="group" aria-label="Choose an animal" className="flex items-center">
-            {animals.map((animal, i) => (
+            {/* Dark translucent pill keeps the white dots readable on any photo. */}
+            <div
+              role="group"
+              aria-label="Choose an animal"
+              className="pointer-events-auto absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center rounded-full bg-black/35 px-1.5 py-1 backdrop-blur-sm"
+            >
+              {animals.map((animal, i) => (
+                <button
+                  key={animal.id}
+                  type="button"
+                  aria-label={`Show ${animal.name}, ${i + 1} of ${count}`}
+                  aria-current={i === index ? "true" : undefined}
+                  onClick={() => showSlide(i)}
+                  className="flex size-6 items-center justify-center rounded-full"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`block size-2.5 rounded-full transition-colors ${
+                      i === index ? "bg-white" : "bg-white/50"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+
+            {/* Nothing rotates under reduced motion, so there is nothing to pause. */}
+            {!reducedMotion && (
               <button
-                key={animal.id}
                 type="button"
-                aria-label={`Show ${animal.name}, ${i + 1} of ${count}`}
-                aria-current={i === index ? "true" : undefined}
-                onClick={() => showSlide(i)}
-                className="group flex size-8 items-center justify-center rounded-full"
+                aria-label={userPaused ? "Play slideshow" : "Pause slideshow"}
+                onClick={() => setUserPaused((paused) => !paused)}
+                className={`${OVERLAY_BUTTON} bottom-3 right-3 size-8`}
               >
-                <span
-                  aria-hidden="true"
-                  className={`block size-3 rounded-full border-2 border-primary transition-colors ${
-                    i === index ? "bg-primary" : "bg-transparent group-hover:bg-primary-soft"
-                  }`}
-                />
+                <Icon path={userPaused ? PLAY_ICON : PAUSE_ICON} className="size-4" />
               </button>
-            ))}
+            )}
           </div>
+        )}
+
+        {/* All slides share one grid cell, so the carousel keeps the height of the tallest. */}
+        <div className="grid">
+          {animals.map((animal, i) => {
+            const active = i === index;
+            const photo = animal.photos[0];
+            return (
+              <div
+                key={animal.id}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`${i + 1} of ${count}`}
+                inert={!active}
+                className={`col-start-1 row-start-1 ${
+                  animate ? "transition-opacity duration-500 motion-reduce:transition-none" : ""
+                } ${active ? "opacity-100" : "pointer-events-none opacity-0"}`}
+              >
+                <div className="aspect-[4/5] overflow-hidden rounded-3xl border border-border bg-surface shadow-md">
+                  {photo ? (
+                    <Image
+                      src={photo}
+                      alt={`Photo of ${animal.name}`}
+                      width={800}
+                      height={1000}
+                      preload={i === 0}
+                      draggable={false}
+                      className="h-full w-full select-none object-cover"
+                    />
+                  ) : (
+                    <PhotoPlaceholder name={animal.name} />
+                  )}
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <p className="font-display text-2xl font-bold leading-tight">{animal.name}</p>
+                      <StatusBadge status={animal.status} />
+                    </div>
+                    <p className="mt-1 text-muted">
+                      {getSpeciesLabel(animal.species)} · {getAgeLabel(animal)}
+                    </p>
+                  </div>
+                  <ButtonLink href={`/animals/${animal.slug}`} variant="secondary">
+                    Meet {animal.name}
+                  </ButtonLink>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       {/* Always polite, but only ever filled in by manual navigation. */}
       <p aria-live="polite" className="sr-only">
