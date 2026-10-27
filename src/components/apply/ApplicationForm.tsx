@@ -13,6 +13,7 @@ import { StepIndicator } from "@/components/apply/StepIndicator";
 import { StepPets } from "@/components/apply/StepPets";
 import type { ApplyAnimal } from "@/components/apply/types";
 import { Button } from "@/components/ui/Button";
+import { submitApplication } from "@/lib/applications-api";
 import {
   APPLICATION_STEP_FIELDS,
   applicationSchema,
@@ -49,6 +50,10 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
 
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState<ApplicationInput | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sendFailed, setSendFailed] = useState(false);
+  // Honeypot: a real person never sees this field; simple bots fill it in.
+  const honeypotRef = useRef<HTMLInputElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const moveFocus = useRef(false);
 
@@ -89,6 +94,24 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
     if (failedStep !== -1 && failedStep !== step) goTo(failedStep);
   }
 
+  async function send(values: ApplicationInput) {
+    if (sending) return;
+    setSendFailed(false);
+
+    // A bot filled the hidden field. Look successful, but store nothing.
+    if (honeypotRef.current?.value) return setSubmitted(values);
+
+    setSending(true);
+    try {
+      await submitApplication(values, animals.find((a) => a.slug === values.animalSlug)?.name);
+      setSubmitted(values);
+    } catch {
+      setSendFailed(true);
+    } finally {
+      setSending(false);
+    }
+  }
+
   if (submitted) {
     const animal = animals.find((a) => a.slug === submitted.animalSlug);
     return (
@@ -107,7 +130,7 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
         event.preventDefault();
         // On earlier steps (Next button or Enter) advance instead of submitting.
         if (step < LAST_STEP) return void goNext();
-        void form.handleSubmit(setSubmitted, onInvalid)(event);
+        void form.handleSubmit(send, onInvalid)(event);
       }}
       className="space-y-6"
     >
@@ -126,7 +149,30 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
         {step === 1 && <StepHome form={form} />}
         {step === 2 && <StepPets form={form} />}
         {step === 3 && <StepAnimal form={form} animals={animals} />}
+
+        {/* Off-screen rather than display:none, which some bots skip. Not reachable by keyboard or screen reader. */}
+        <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+          <label>
+            Leave this field empty
+            <input ref={honeypotRef} type="text" name="website" tabIndex={-1} autoComplete="off" />
+          </label>
+        </div>
       </div>
+
+      {step === LAST_STEP && (
+        <p className="text-sm text-muted">
+          <strong className="font-semibold text-foreground">Your privacy:</strong> we collect the name,
+          contact details and answers above. We only use them to review this adoption application, and
+          only Maple Tail Rescue staff can see them.
+        </p>
+      )}
+
+      {sendFailed && (
+        <p role="alert" className="rounded-lg border border-danger bg-surface p-4 font-semibold text-danger">
+          Sorry, we couldn&rsquo;t send your application. Please check your connection and try again.
+          Your answers are still here.
+        </p>
+      )}
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
         {step > 0 ? (
@@ -142,8 +188,8 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
             Next
           </Button>
         ) : (
-          <Button key="submit" type="submit">
-            Submit application
+          <Button key="submit" type="submit" disabled={sending}>
+            {sending ? "Sending…" : "Submit application"}
           </Button>
         )}
       </div>

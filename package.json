@@ -7,10 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "sync": "tsx scripts/sync-animals.ts"
+    "sync": "tsx scripts/sync-animals.ts",
+    "test:rls": "tsx --env-file=.env.local scripts/test-rls.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.2",
+    "@supabase/supabase-js": "^2.118.0",
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
