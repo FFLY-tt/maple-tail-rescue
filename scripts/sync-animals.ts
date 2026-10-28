@@ -31,7 +31,7 @@ const IMAGES_DIR = path.join(ROOT, "public", "animals");
 
 type RawMedia = { id?: number; source_url?: string; url?: string };
 
-type RawAnimal = {
+export type RawAnimal = {
   id: number;
   slug: string;
   title: { rendered: string };
@@ -101,7 +101,7 @@ async function mediaUrlById(id: number): Promise<string | null> {
 }
 
 /** ACF image fields come back as an object, an ID, a URL string, or false/null. */
-async function resolveAcfImageUrl(value: unknown): Promise<string | null> {
+export async function resolveAcfImageUrl(value: unknown): Promise<string | null> {
   if (!value) return null;
   if (typeof value === "number") return mediaUrlById(value);
   if (typeof value === "string") {
@@ -176,7 +176,7 @@ function oneOf<T extends string>(field: string, value: unknown, allowed: readonl
 const GOOD_WITH: readonly GoodWith[] = ["dogs", "cats", "kids"];
 
 /** Pure mapping from the raw WordPress record (+ already-downloaded photo paths) to the frontend `Animal`. */
-function mapToAnimal(raw: RawAnimal, photos: string[]): Animal {
+export function mapToAnimal(raw: RawAnimal, photos: string[]): Animal {
   const acf = Array.isArray(raw.acf) ? {} : (raw.acf ?? {});
   const goodWith = Array.isArray(acf.good_with)
     ? acf.good_with.filter((v): v is GoodWith => GOOD_WITH.includes(v as GoodWith))
@@ -283,7 +283,10 @@ async function main(): Promise<void> {
   if (skipped.length > 0) process.exitCode = 1;
 }
 
-main().catch((err) => {
-  console.error(`\nSync failed: ${err instanceof Error ? err.message : String(err)}`);
-  process.exit(1);
-});
+// Only sync when run as a script (`npm run sync`), not when a test imports this file.
+if (/sync-animals\.[cm]?[jt]s$/.test(process.argv[1] ?? "")) {
+  main().catch((err) => {
+    console.error(`\nSync failed: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  });
+}

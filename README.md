@@ -87,11 +87,18 @@ Optionally set `NEXT_PUBLIC_SITE_URL` in `.env.local` to the deployed address so
 | `npm run sync` | Pull animals and photos from WordPress into `src/data` and `public/animals` |
 | `npm run test:rls` | Check the database rules as a signed-out visitor using the publishable key (insert works; read, update, delete and bad data are rejected). Leaves one test row to delete afterwards; the script prints the SQL. |
 | `npm run lint` | Run ESLint |
+| `npm run typecheck` | Generate Next.js route types, then run the TypeScript compiler |
+| `npm test` | Unit tests (Vitest): data mapping, label helpers, sorting, the application schema and its database mapping |
+| `npm run test:e2e` | End-to-end test (Playwright, Chromium): home → animals → filter → detail → apply → success. It builds the site and mocks the Supabase insert, so it never touches a real database. First run needs `npx playwright install chromium`. |
+
+## Continuous integration
+
+GitHub Actions (`.github/workflows/ci.yml`) runs lint, type-check, unit tests and the build on every push and pull request, plus the Playwright test as a second job. It uses no secrets and never runs `test:rls`.
 
 ## Limitations
 
 - Not deployed; there is no live demo yet.
-- No automated test suite beyond `test:rls`, and no CI.
+- Test coverage is a foundation, not full coverage: unit tests for the pure logic and one end-to-end flow. The admin area and individual components are untested.
 - Applications aren't emailed to anyone, and applicants don't receive a confirmation. Staff see them only in `/admin`.
 - The admin list loads up to 1,000 applications with no pagination or search, and there's no password reset flow.
 - Images are served unoptimized (a static-export constraint), so photos should be resized before upload.
