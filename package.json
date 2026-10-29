@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
     "lint": "eslint",
     "sync": "tsx scripts/sync-animals.ts",
     "test:rls": "tsx --env-file=.env.local scripts/test-rls.ts",
@@ -38,5 +37,8 @@
     "typescript": "^5",
     "vitest": "^5.0.5"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.9.0"
+  }
 }

@@ -54,7 +54,7 @@ The site has no server at runtime. Animal data is baked in at build time, so cha
 
 ## Local setup
 
-**Requirements:** Node.js 20.9+, [LocalWP](https://localwp.com/), a free [Supabase](https://supabase.com/) project.
+**Requirements:** Node.js 20.9+ (`.nvmrc` pins 22, which CI uses; `nvm use` picks it up), [LocalWP](https://localwp.com/), a free [Supabase](https://supabase.com/) project.
 
 1. **Install dependencies**
    ```bash

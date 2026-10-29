@@ -1,0 +1,11 @@
+# Store text files with LF line endings, whatever the OS they were committed from,
+# and check them out with LF too. Git still detects binary files by their content.
+* text=auto eol=lf
+
+# Be explicit about the binary files in this repo.
+*.jpg  binary
+*.jpeg binary
+*.png  binary
+*.webp binary
+*.ico  binary
+*.woff2 binary
