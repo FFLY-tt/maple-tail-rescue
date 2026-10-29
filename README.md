@@ -123,6 +123,10 @@ It uses no secrets and never runs `test:rls`.
 
 The animal photos come from [Unsplash](https://unsplash.com) and are used under the [Unsplash License](https://unsplash.com/license). Photographers: Baptist Standaert, Victor G, Peri Stojnic, Alvan Nee and Alexander London. The photos are stand-ins for a fictional rescue's animals, and the animals pictured are not real rescue animals.
 
+## Fonts
+
+[Fraunces](https://github.com/undercasetype/Fraunces) (headings) and [Nunito Sans](https://github.com/Fonthausen/NunitoSans) (body), under the SIL Open Font License 1.1. The Latin variable-font files are committed in `src/app/fonts/` with their license texts, so builds never need to reach Google Fonts.
+
 ## License
 
 Released under the [MIT License](LICENSE). The Unsplash photos are not covered by it; see Photo credits above.

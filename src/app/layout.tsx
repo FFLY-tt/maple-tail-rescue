@@ -1,19 +1,27 @@
 import type { Metadata } from "next";
-import { Fraunces, Nunito_Sans } from "next/font/google";
+import localFont from "next/font/local";
 
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SITE } from "@/content/site";
 import "./globals.css";
 
-const bodyFont = Nunito_Sans({
+// Self-hosted (Latin subset, variable fonts, SIL Open Font License; see the *-OFL.txt files next
+// to them), so builds never need to reach Google. Weight ranges are the fonts' full ranges.
+const bodyFont = localFont({
+  src: "./fonts/nunito-sans-latin-wght-normal.woff2",
   variable: "--font-body",
-  subsets: ["latin"],
+  weight: "200 1000",
+  display: "swap",
+  adjustFontFallback: "Arial",
 });
 
-const headingFont = Fraunces({
+const headingFont = localFont({
+  src: "./fonts/fraunces-latin-wght-normal.woff2",
   variable: "--font-heading",
-  subsets: ["latin"],
+  weight: "100 900",
+  display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
 export const metadata: Metadata = {
