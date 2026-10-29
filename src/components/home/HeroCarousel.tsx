@@ -31,10 +31,13 @@ function useReducedMotion() {
   );
 }
 
-// Overlay controls: a translucent white disc, faint at rest and firmer once the
-// carousel is hovered or has focus inside (hover styles only apply on devices that hover).
+// Overlay controls: a translucent white disc, fainter at rest and firmer once the carousel is hovered
+// or has focus inside (hover styles only apply on devices that hover). The thin ring keeps the disc
+// visible on pale photos. Contrast of the icon, the dots and their pill was measured against every
+// photo (worst pixel): icon 7.6:1, active dot 6.5:1, inactive dot 4.5:1; the WCAG minimum is 3:1.
+// Re-check if you change these opacities or add very light photos.
 const OVERLAY_BUTTON =
-  "pointer-events-auto absolute flex items-center justify-center rounded-full bg-white/55 text-foreground shadow-md transition-colors hover:bg-white group-hover/carousel:bg-white/90 group-focus-within/carousel:bg-white/90";
+  "pointer-events-auto absolute flex items-center justify-center rounded-full bg-white/70 text-foreground shadow-md ring-1 ring-black/10 transition-colors hover:bg-white group-hover/carousel:bg-white/90 group-focus-within/carousel:bg-white/90";
 
 function Icon({ path, className = "size-5" }: { path: string; className?: string }) {
   return (
@@ -196,11 +199,11 @@ export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
               <Icon path={NEXT_ICON} />
             </button>
 
-            {/* Dark translucent pill keeps the white dots readable on any photo. */}
+            {/* Dark translucent pill keeps the white dots readable on any photo (see the note on OVERLAY_BUTTON). */}
             <div
               role="group"
               aria-label="Choose an animal"
-              className="pointer-events-auto absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center rounded-full bg-black/35 px-1.5 py-1 backdrop-blur-sm"
+              className="pointer-events-auto absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center rounded-full bg-black/60 px-1.5 py-1 backdrop-blur-sm"
             >
               {animals.map((animal, i) => (
                 <button
@@ -213,8 +216,9 @@ export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
                 >
                   <span
                     aria-hidden="true"
-                    className={`block size-2.5 rounded-full transition-colors ${
-                      i === index ? "bg-white" : "bg-white/50"
+                    // The current slide is a wider capsule as well as brighter, so it isn't shown by color alone.
+                    className={`block h-2.5 rounded-full transition-all ${
+                      i === index ? "w-5 bg-white" : "w-2.5 bg-white/75"
                     }`}
                   />
                 </button>

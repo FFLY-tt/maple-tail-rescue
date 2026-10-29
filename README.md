@@ -50,7 +50,7 @@ The site has no server at runtime. Animal data is baked in at build time, so cha
 
   The `/admin` redirect and "no access" screen are only conveniences; without RLS they would protect nothing.
 - **One source of truth for form rules.** `src/lib/application-schema.ts` is plain Zod and drives the form's validation; the database constraints are written to match it.
-- **Accessibility built in, not audited.** Semantic HTML, keyboard-operable controls with visible focus rings, labelled form fields with error messages, a skip link, and `prefers-reduced-motion` support. The carousel can be paused, doesn't auto-advance while hovered or keyboard-focused, and only announces slides the visitor changed. I have not run a formal audit or tested with a range of screen readers.
+- **Accessibility built in, not audited.** Semantic HTML, keyboard-operable controls with visible focus rings, labelled form fields with error messages, a skip link, and `prefers-reduced-motion` support. The carousel can be paused, doesn't auto-advance while hovered or keyboard-focused, and only announces slides the visitor changed. Automated checks run in the end-to-end tests (axe-core on the home, animals, detail, apply and adoption-process pages, failing on serious or critical violations), and a unit test measures the carousel controls' contrast against every photo, since axe can't judge text or controls drawn over images. Automated tools find only part of the real problems: I have not done a manual audit or tested with a range of screen readers.
 
 ## Local setup
 
@@ -97,7 +97,7 @@ For a throwaway build with dummy values, set `ALLOW_PLACEHOLDER_ENV=1` (CI and t
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Generate Next.js route types, then run the TypeScript compiler |
 | `npm test` | Unit tests (Vitest): WordPress data mapping, label helpers, sorting, the application schema and its database mapping, the bot-trap decision, and the production-config check |
-| `npm run test:e2e` | End-to-end tests (Playwright, Chromium): the public flow (home → animals → filter → detail → apply → success) and the application form's bot trap. They build the site and mock the Supabase insert, so they never touch a real database. First run needs `npx playwright install chromium`. |
+| `npm run test:e2e` | End-to-end tests (Playwright, Chromium): the public flow (home → animals → filter → detail → apply → success) the application form's conditional questions and bot trap, and axe accessibility checks. They build the site and mock the Supabase insert, so they never touch a real database. First run needs `npx playwright install chromium`. |
 
 ## Continuous integration
 

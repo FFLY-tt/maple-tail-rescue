@@ -34,7 +34,7 @@ export function AnimalCard({ animal, preloadPhoto = false }: AnimalCardProps) {
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-display text-xl font-bold leading-tight">
+          <h2 className="font-display text-xl font-bold leading-tight">
             {/* The ::after stretches this link over the whole card. */}
             <Link
               href={`/animals/${animal.slug}`}
@@ -42,7 +42,7 @@ export function AnimalCard({ animal, preloadPhoto = false }: AnimalCardProps) {
             >
               {animal.name}
             </Link>
-          </h3>
+          </h2>
           <StatusBadge status={animal.status} />
         </div>
         <p className="text-muted">
