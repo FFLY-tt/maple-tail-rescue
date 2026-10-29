@@ -104,6 +104,10 @@ GitHub Actions (`.github/workflows/ci.yml`) runs lint, type-check, unit tests an
 - Images are served unoptimized (a static-export constraint), so photos should be resized before upload.
 - Animal changes need a re-sync and rebuild; there is no live preview or webhook.
 
+## Photo credits
+
+The animal photos come from [Unsplash](https://unsplash.com) and are used under the [Unsplash License](https://unsplash.com/license). Photographers: Baptist Standaert, Victor G, Peri Stojnic, Alvan Nee and Alexander London. The photos are stand-ins for a fictional rescue's animals, and the animals pictured are not real rescue animals.
+
 ## License
 
-No license has been chosen yet, so all rights are reserved by default.
+Released under the [MIT License](LICENSE). The Unsplash photos are not covered by it; see Photo credits above.
