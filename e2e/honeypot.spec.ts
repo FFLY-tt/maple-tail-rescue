@@ -25,8 +25,13 @@ async function captureInserts(page: Page) {
 async function openAndFillForm(page: Page) {
   await page.clock.install({ time: T0 });
   await page.goto("/apply");
-  // Freeze time one second after the page loaded. Nothing below advances it unless the test says so.
-  await page.clock.pauseAt(new Date(T0.getTime() + 1000));
+  await expect(page.getByLabel("Full name")).toBeVisible();
+
+  // Freeze the page's clock just after "now" (as the page sees it). From here nothing advances it
+  // unless the test calls runFor(), so "how long the form was open" doesn't depend on machine speed.
+  // The margin keeps the pause time in the future even when the machine is busy.
+  const now = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(new Date(now + 1000));
 
   await page.getByLabel("Full name").fill("Sam Lee");
   await page.getByLabel("Email").fill("sam@example.com");

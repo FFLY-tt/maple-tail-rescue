@@ -59,6 +59,11 @@ export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
   const reducedMotion = useReducedMotion();
 
   const [index, setIndex] = useState(0);
+  // Only the current slide, the next one and the one fading out get an <img>; the
+  // rest render an empty frame. `ready` turns on loading the next slide after mount;
+  // `leaving` is the slide just left, kept until the next change so it can fade out.
+  const [ready, setReady] = useState(false);
+  const [leaving, setLeaving] = useState<number | null>(null);
   // Slides only fade once the visitor or the timer has changed them, so the
   // jump to a random start slide after mount is not animated.
   const [animate, setAnimate] = useState(false);
@@ -73,12 +78,29 @@ export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
 
   // Equal time for everyone: start anywhere, not always on the first animal.
   // Every slide is stacked in the same grid cell, so this causes no layout shift.
+  // The picked slide's photo is fetched first and the switch happens once it has
+  // loaded, so the visitor never sees an empty frame.
   useEffect(() => {
-    if (count > 1) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- must run after mount to keep the first render deterministic
-      setIndex(Math.floor(Math.random() * count));
+    let cancelled = false;
+    const start = count > 1 ? Math.floor(Math.random() * count) : 0;
+    const photo = animals[start]?.photos[0];
+    const switchTo = () => {
+      if (cancelled) return;
+      setIndex(start);
+      setReady(true);
+    };
+    if (start === 0 || !photo) {
+      // Slide 0 is already on screen; nothing to fetch. Deferred only to keep the effect body free of synchronous state updates.
+      void Promise.resolve().then(switchTo);
+    } else {
+      const image = new window.Image();
+      image.src = photo;
+      image.decode().then(switchTo, switchTo);
     }
-  }, [count]);
+    return () => {
+      cancelled = true;
+    };
+  }, [animals, count]);
 
   // A fresh timeout per slide (and per resume) gives each slide a full interval.
   useEffect(() => {
@@ -86,7 +108,8 @@ export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
     const timer = setTimeout(() => {
       setAnimate(true);
       setAnnouncement("");
-      setIndex((current) => (current + 1) % count);
+      setLeaving(index);
+      setIndex((index + 1) % count);
     }, SLIDE_MS);
     return () => clearTimeout(timer);
   }, [autoAdvance, index, count]);
@@ -97,6 +120,7 @@ export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
     const next = (target + count) % count;
     const animal = animals[next];
     setAnimate(true);
+    setLeaving(index);
     setIndex(next);
     setAnnouncement(
       `${animal.name}, ${getSpeciesLabel(animal.species).toLowerCase()}, ${getAgeLabel(animal).toLowerCase()}. Slide ${next + 1} of ${count}.`,
@@ -216,6 +240,7 @@ export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
           {animals.map((animal, i) => {
             const active = i === index;
             const photo = animal.photos[0];
+            const loadPhoto = active || i === leaving || (ready && i === (index + 1) % count);
             return (
               <div
                 key={animal.id}
@@ -228,7 +253,9 @@ export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
                 } ${active ? "opacity-100" : "pointer-events-none opacity-0"}`}
               >
                 <div className="aspect-[4/5] overflow-hidden rounded-3xl border border-border bg-surface shadow-md">
-                  {photo ? (
+                  {!photo ? (
+                    <PhotoPlaceholder name={animal.name} />
+                  ) : loadPhoto ? (
                     <Image
                       src={photo}
                       alt={`Photo of ${animal.name}`}
@@ -238,9 +265,7 @@ export function HeroCarousel({ animals }: { animals: readonly Animal[] }) {
                       draggable={false}
                       className="h-full w-full select-none object-cover"
                     />
-                  ) : (
-                    <PhotoPlaceholder name={animal.name} />
-                  )}
+                  ) : null}
                 </div>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
                   <div>

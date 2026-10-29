@@ -16,6 +16,6 @@ export type Animal = {
   goodWith: GoodWith[];
   personality: string;
   status: AdoptionStatus;
-  /** Local public paths (e.g. "/animals/earl-grey/main.jpg"); first entry is the main photo. */
+  /** Local public paths of the large version (e.g. "/animals/earl-grey/main-800.webp"; see lib/photos.ts); first entry is the main photo. */
   photos: string[];
 };

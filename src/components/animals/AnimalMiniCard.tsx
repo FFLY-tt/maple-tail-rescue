@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PhotoPlaceholder } from "@/components/animals/PhotoPlaceholder";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getAgeLabel } from "@/lib/labels";
+import { cardPhoto } from "@/lib/photos";
 import type { Animal } from "@/types/animal";
 
 /** A lighter, smaller take on AnimalCard for dense grids: square photo, no shadow. */
@@ -15,10 +16,10 @@ export function AnimalMiniCard({ animal }: { animal: Animal }) {
       <div className="aspect-square w-full overflow-hidden bg-surface-alt">
         {photo ? (
           <Image
-            src={photo}
+            src={cardPhoto(photo)}
             alt={`Photo of ${animal.name}`}
             width={400}
-            height={400}
+            height={500}
             className="h-full w-full object-cover"
           />
         ) : (

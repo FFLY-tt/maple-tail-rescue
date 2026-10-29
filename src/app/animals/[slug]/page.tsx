@@ -10,6 +10,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { SITE } from "@/content/site";
 import { allAnimals, getAnimalBySlug } from "@/lib/animal-data";
+import { ogPhoto } from "@/lib/photos";
 import { firstSentence } from "@/lib/text";
 import type { Animal } from "@/types/animal";
 
@@ -37,7 +38,8 @@ export async function generateMetadata({
   const photo = animal.photos[0];
   // A page's own openGraph/twitter replace the layout's, so list every field here.
   // Relative URLs become absolute through metadataBase (see SITE.url).
-  const images = photo ? [{ url: photo, alt: `Photo of ${animal.name}` }] : undefined;
+  // Link previews get the JPEG version: not every platform reads WebP.
+  const images = photo ? [{ url: ogPhoto(photo), alt: `Photo of ${animal.name}` }] : undefined;
 
   return {
     title: animal.name,

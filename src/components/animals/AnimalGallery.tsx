@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { PhotoPlaceholder } from "@/components/animals/PhotoPlaceholder";
+import { cardPhoto } from "@/lib/photos";
 
 type AnimalGalleryProps = {
   name: string;
@@ -28,8 +29,8 @@ export function AnimalGallery({ name, photos }: AnimalGalleryProps) {
           key={photos[selected]}
           src={photos[selected]}
           alt={`Photo ${selected + 1} of ${photos.length} of ${name}`}
-          width={960}
-          height={1200}
+          width={800}
+          height={1000}
           // The first photo is the page's largest image: load it eagerly.
           preload={selected === 0}
           className="h-full w-full object-cover"
@@ -50,10 +51,10 @@ export function AnimalGallery({ name, photos }: AnimalGalleryProps) {
                 }`}
               >
                 <Image
-                  src={photo}
+                  src={cardPhoto(photo)}
                   alt=""
-                  width={160}
-                  height={160}
+                  width={80}
+                  height={100}
                   className="h-full w-full object-cover"
                 />
               </button>

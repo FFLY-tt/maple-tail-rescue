@@ -68,7 +68,7 @@ The site has no server at runtime. Animal data is baked in at build time, so cha
    ```bash
    npm run sync
    ```
-   This writes `src/data/animals.json` and downloads photos into `public/animals/`. The repo already contains a synced copy of the demo data, so you can skip steps 2–3 just to try the site.
+   This writes `src/data/animals.json` and saves resized versions of each photo (WebP, plus a JPEG for link previews) into `public/animals/`. The repo already contains a synced copy of the demo data, so you can skip steps 2–3 just to try the site.
 4. **Supabase.** Copy `.env.example` to `.env.local` and fill in your project URL and **publishable** key. Never use the `service_role` / secret key in this project. Then paste `supabase/migrations/001_applications.sql` into the Supabase SQL Editor and run it. To use the admin area, create a user under Authentication → Users, turn off "Allow new users to sign up", and add yourself to the staff table using the commented example at the end of the migration file.
 5. **Run it**
    ```bash
@@ -113,7 +113,7 @@ It uses no secrets and never runs `test:rls`.
 - **Spam protection is light.** A hidden bot-trap field catches simple bots (it drops a submission only if the trap is filled *and* the form was sent within 3 seconds, so autofill can't lose a real application). There is no CAPTCHA or rate limit, so a determined script with the public key can still add rows. Dropped bot submissions are only logged to the visitor's browser console; there is no server-side record.
 - **No notifications.** Applications aren't emailed to staff, and applicants don't get an automatic confirmation; staff see applications only in `/admin`. The success screen says a volunteer will email the applicant, which is a manual step.
 - The admin list loads up to 1,000 applications with no pagination or search, and there's no password reset flow.
-- Images are served unoptimized (a static-export constraint), so photos should be resized before upload.
+- Next.js can't optimize images in a static export, so `npm run sync` does it instead: each photo is cropped to 4:5 and saved as an 800px WebP (detail page and home carousel), a 400px WebP (cards) and a JPEG for link previews. There is no per-device `srcset`.
 - Animal changes need a re-sync and rebuild; there is no live preview or webhook.
 - No privacy policy page or data-retention process yet. Staff cannot delete applications through the app.
 

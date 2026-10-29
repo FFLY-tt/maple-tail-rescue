@@ -1,13 +1,14 @@
 /**
  * Exports animals from the local WordPress (LocalWP) into the repo:
  *   - src/data/animals.json   (clean `Animal[]`)
- *   - public/animals/{slug}/  (downloaded photos)
+ *   - public/animals/{slug}/  (photos, resized to WebP: see src/lib/photos.ts)
  *
  * Run with `npm run sync`. Override the source with WP_URL=http://other.local.
  */
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { writePhotoVariants } from "./sync-images";
 import type {
   AdoptionStatus,
   AgeGroup,
@@ -125,23 +126,13 @@ async function resolveFeaturedImageUrl(raw: RawAnimal): Promise<string | null> {
 // Image download
 // ---------------------------------------------------------------------------
 
-const CONTENT_TYPE_EXT: Record<string, string> = {
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-  "image/webp": ".webp",
-  "image/gif": ".gif",
-  "image/avif": ".avif",
-};
-
-/** Downloads one image into public/animals/{slug}/{baseName}.{ext}; returns its public path. */
+/**
+ * Downloads one image and writes its resized versions into public/animals/{slug}/
+ * (see src/lib/photos.ts). Returns the public path of the large version.
+ */
 async function downloadImage(url: string, slug: string, baseName: string): Promise<string> {
   const res = await wpFetch(url);
-  const ext =
-    path.extname(new URL(url).pathname).toLowerCase() ||
-    CONTENT_TYPE_EXT[res.headers.get("content-type")?.split(";")[0] ?? ""] ||
-    ".jpg";
-  const fileName = `${baseName}${ext}`;
-  await writeFile(path.join(IMAGES_DIR, slug, fileName), Buffer.from(await res.arrayBuffer()));
+  const fileName = await writePhotoVariants(Buffer.from(await res.arrayBuffer()), path.join(IMAGES_DIR, slug), baseName);
   return `/animals/${slug}/${fileName}`;
 }
 

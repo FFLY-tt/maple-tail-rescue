@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PhotoPlaceholder } from "@/components/animals/PhotoPlaceholder";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getAgeLabel, getSizeLabel, getSpeciesLabel } from "@/lib/labels";
+import { cardPhoto } from "@/lib/photos";
 import type { Animal } from "@/types/animal";
 
 type AnimalCardProps = {
@@ -20,10 +21,10 @@ export function AnimalCard({ animal, preloadPhoto = false }: AnimalCardProps) {
       <div className="aspect-[4/5] w-full overflow-hidden bg-surface-alt">
         {photo ? (
           <Image
-            src={photo}
+            src={cardPhoto(photo)}
             alt={`Photo of ${animal.name}`}
-            width={640}
-            height={800}
+            width={400}
+            height={500}
             preload={preloadPhoto}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
