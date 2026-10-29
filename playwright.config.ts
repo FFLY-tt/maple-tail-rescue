@@ -7,6 +7,8 @@ const PORT = 4321;
 const TEST_ENV = {
   NEXT_PUBLIC_SUPABASE_URL: "https://e2e-test.supabase.co",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "e2e-test-publishable-key",
+  // This build is for tests only, so skip the production-config guard (see src/lib/env-check.ts).
+  ALLOW_PLACEHOLDER_ENV: "1",
 };
 
 export default defineConfig({

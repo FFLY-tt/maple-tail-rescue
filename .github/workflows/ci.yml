@@ -26,9 +26,18 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      # No Supabase variables here on purpose: the build works without them, and
-      # nothing in CI talks to a real database (no test:rls).
+      # The production guard must refuse a build with no real configuration.
+      - name: Production build refuses missing config
+        run: |
+          if npm run build; then
+            echo "::error::The production build should have failed without NEXT_PUBLIC_* variables"
+            exit 1
+          fi
+      # CI has no real Supabase project or site address (and no secrets, no test:rls), so the
+      # build uses the explicit flag instead. Never deploy a build made this way.
       - run: npm run build
+        env:
+          ALLOW_PLACEHOLDER_ENV: "1"
 
   e2e:
     name: End-to-end (Playwright)

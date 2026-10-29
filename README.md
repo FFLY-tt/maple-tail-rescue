@@ -76,14 +76,20 @@ The site has no server at runtime. Animal data is baked in at build time, so cha
    ```
    Open http://localhost:3000. The admin area is at http://localhost:3000/admin.
 
-Optionally set `NEXT_PUBLIC_SITE_URL` in `.env.local` to the deployed address so share previews get absolute image URLs.
+`NEXT_PUBLIC_SITE_URL` (the deployed address, used for share previews) isn't needed for `npm run dev`, but it is for a production build; see below.
+
+## Production builds
+
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `NEXT_PUBLIC_SITE_URL` are baked into the built site. To stop a build with a missing or placeholder value from being deployed, `npm run build` (and `next build`) fails with a list of what's wrong if any of them is unset, still a placeholder from `.env.example`, a non-https or local address, or a Supabase *secret* key (which would be published in the site's JavaScript). Dev, `npm run typecheck` and the tests are not affected.
+
+For a throwaway build with dummy values, set `ALLOW_PLACEHOLDER_ENV=1` (CI and the Playwright tests do). Never deploy a build made that way.
 
 ## Scripts
 
 | Script | What it does |
 | --- | --- |
 | `npm run dev` | Start the dev server |
-| `npm run build` | Build the static site into `out/` |
+| `npm run build` | Build the static site into `out/`. Refuses to run with missing or placeholder config (see Production builds). |
 | `npm run sync` | Pull animals and photos from WordPress into `src/data` and `public/animals` |
 | `npm run test:rls` | Check the database rules as a signed-out visitor using the publishable key (insert works; read, update, delete and bad data are rejected). Leaves one test row to delete afterwards; the script prints the SQL. |
 | `npm run lint` | Run ESLint |
