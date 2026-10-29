@@ -94,21 +94,28 @@ For a throwaway build with dummy values, set `ALLOW_PLACEHOLDER_ENV=1` (CI and t
 | `npm run test:rls` | Check the database rules as a signed-out visitor using the publishable key (insert works; read, update, delete and bad data are rejected). Leaves one test row to delete afterwards; the script prints the SQL. |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Generate Next.js route types, then run the TypeScript compiler |
-| `npm test` | Unit tests (Vitest): data mapping, label helpers, sorting, the application schema and its database mapping |
-| `npm run test:e2e` | End-to-end test (Playwright, Chromium): home → animals → filter → detail → apply → success. It builds the site and mocks the Supabase insert, so it never touches a real database. First run needs `npx playwright install chromium`. |
+| `npm test` | Unit tests (Vitest): WordPress data mapping, label helpers, sorting, the application schema and its database mapping, the bot-trap decision, and the production-config check |
+| `npm run test:e2e` | End-to-end tests (Playwright, Chromium): the public flow (home → animals → filter → detail → apply → success) and the application form's bot trap. They build the site and mock the Supabase insert, so they never touch a real database. First run needs `npx playwright install chromium`. |
 
 ## Continuous integration
 
-GitHub Actions (`.github/workflows/ci.yml`) runs lint, type-check, unit tests and the build on every push and pull request, plus the Playwright test as a second job. It uses no secrets and never runs `test:rls`.
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request:
+
+- **Checks job:** lint, type-check, unit tests, a step that proves a production build with no config is refused, then the build itself (with `ALLOW_PLACEHOLDER_ENV=1`, since CI has no real Supabase project or site address).
+- **End-to-end job:** the Playwright tests against the built site.
+
+It uses no secrets and never runs `test:rls`.
 
 ## Limitations
 
 - Not deployed; there is no live demo yet.
-- Test coverage is a foundation, not full coverage: unit tests for the pure logic and one end-to-end flow. The admin area and individual components are untested.
-- Applications aren't emailed to anyone, and applicants don't receive a confirmation. Staff see them only in `/admin`.
+- **Tests cover the logic and the main flows, not everything.** There are unit tests for the pure logic, and end-to-end tests for the public application flow and the bot trap. The admin area, the carousel's pause and reduced-motion behaviour, and the failed-submission path are untested.
+- **Spam protection is light.** A hidden bot-trap field catches simple bots (it drops a submission only if the trap is filled *and* the form was sent within 3 seconds, so autofill can't lose a real application). There is no CAPTCHA or rate limit, so a determined script with the public key can still add rows. Dropped bot submissions are only logged to the visitor's browser console; there is no server-side record.
+- **No notifications.** Applications aren't emailed to staff, and applicants don't get an automatic confirmation; staff see applications only in `/admin`. The success screen says a volunteer will email the applicant, which is a manual step.
 - The admin list loads up to 1,000 applications with no pagination or search, and there's no password reset flow.
 - Images are served unoptimized (a static-export constraint), so photos should be resized before upload.
 - Animal changes need a re-sync and rebuild; there is no live preview or webhook.
+- No privacy policy page or data-retention process yet. Staff cannot delete applications through the app.
 
 ## Photo credits
 
