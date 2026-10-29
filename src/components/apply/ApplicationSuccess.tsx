@@ -37,13 +37,10 @@ export function ApplicationSuccess({ applicantName, email, animal }: Application
         </h2>
         <p className="mx-auto mt-3 max-w-md text-lg">
           {animal
-            ? `We’ve received your application for ${animal.name}.`
-            : "We’ve received your application."}{" "}
-          A volunteer will email you at <strong className="break-all">{email}</strong>{" "}
+            ? `Your application for ${animal.name} has been submitted.`
+            : "Your application has been submitted."}{" "}
+          A volunteer will read it and email you at <strong className="break-all">{email}</strong>{" "}
           within a few days to set up a phone chat.
-        </p>
-        <p className="mx-auto mt-3 max-w-md text-sm text-muted">
-          This is a demo, so nothing has actually been sent.
         </p>
       </div>
 

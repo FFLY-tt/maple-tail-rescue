@@ -85,7 +85,8 @@ test("visitor browses, filters, opens an animal and sends an application", async
 
   // Success screen
   await expect(page.getByRole("heading", { name: "Thank you, Sam!" })).toBeVisible();
-  await expect(page.getByText(`We’ve received your application for ${animal.name}.`)).toBeVisible();
+  await expect(page.getByText(`Your application for ${animal.name} has been submitted.`)).toBeVisible();
+  await expect(page.getByText(/nothing has actually been sent/i)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "What happens next" })).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: "Apply" }).filter({ hasText: "Done" })).toBeVisible();
   await expect(page.getByRole("link", { name: `Back to ${animal.name}’s page` })).toHaveAttribute(
