@@ -4,11 +4,16 @@
  *   - public/animals/{slug}/  (photos, resized to WebP: see src/lib/photos.ts)
  *
  * Run with `npm run sync`. Override the source with WP_URL=http://other.local.
+ *
+ * Safe by construction: everything is built in .sync-staging/ first, checked, and
+ * only then swapped in (see sync-swap.ts). If anything fails, the previous photos
+ * and animals.json are left exactly as they were.
  */
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { writePhotoVariants } from "./sync-images";
+import { AnimalDataError, parseAnimals } from "../src/lib/animal-schema";
+import { CARD_SUFFIX, LARGE_SUFFIX, OG_SUFFIX } from "../src/lib/photos";
 import type {
   AdoptionStatus,
   AgeGroup,
@@ -18,13 +23,11 @@ import type {
   Size,
   Species,
 } from "../src/types/animal";
+import { writePhotoVariants } from "./sync-images";
+import { swapIn } from "./sync-swap";
 
 const WP_URL = (process.env.WP_URL ?? "http://paws-demo.local").replace(/\/+$/, "");
 const REQUEST_TIMEOUT_MS = 20_000;
-
-const ROOT = process.cwd();
-const DATA_FILE = path.join(ROOT, "src", "data", "animals.json");
-const IMAGES_DIR = path.join(ROOT, "public", "animals");
 
 // ---------------------------------------------------------------------------
 // Raw WordPress shapes (only what we read). Never exported to the frontend.
@@ -45,8 +48,17 @@ export type RawAnimal = {
 // WordPress access
 // ---------------------------------------------------------------------------
 
-class SyncError extends Error {}
+/** A problem that makes the sync stop (nothing is changed). */
+export class SyncError extends Error {}
 class UnreachableError extends SyncError {}
+class HttpStatusError extends SyncError {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 
 function restUrl(route: string, params: Record<string, string | number> = {}): string {
   const query = Object.entries(params)
@@ -67,7 +79,7 @@ async function wpFetch(url: string): Promise<Response> {
     );
   }
   if (!res.ok) {
-    throw new SyncError(`WordPress responded ${res.status} ${res.statusText} for ${url}`);
+    throw new HttpStatusError(`WordPress responded ${res.status} ${res.statusText} for ${url}`, res.status);
   }
   return res;
 }
@@ -96,8 +108,10 @@ async function mediaUrlById(id: number): Promise<string | null> {
     const res = await wpFetch(restUrl(`/wp/v2/media/${id}`, { _fields: "source_url" }));
     return ((await res.json()) as RawMedia).source_url ?? null;
   } catch (err) {
-    if (err instanceof UnreachableError) throw err;
-    return null; // e.g. media deleted (404)
+    // A deleted media item (404) means "no photo". Any other failure is a failed sync:
+    // treating it as "no photo" would drop a photo that is really there.
+    if (err instanceof HttpStatusError && err.status === 404) return null;
+    throw err;
   }
 }
 
@@ -127,12 +141,16 @@ async function resolveFeaturedImageUrl(raw: RawAnimal): Promise<string | null> {
 // ---------------------------------------------------------------------------
 
 /**
- * Downloads one image and writes its resized versions into public/animals/{slug}/
+ * Downloads one image and writes its resized versions into `imagesDir/{slug}/`
  * (see src/lib/photos.ts). Returns the public path of the large version.
  */
-async function downloadImage(url: string, slug: string, baseName: string): Promise<string> {
+async function downloadImage(url: string, imagesDir: string, slug: string, baseName: string): Promise<string> {
   const res = await wpFetch(url);
-  const fileName = await writePhotoVariants(Buffer.from(await res.arrayBuffer()), path.join(IMAGES_DIR, slug), baseName);
+  const fileName = await writePhotoVariants(
+    Buffer.from(await res.arrayBuffer()),
+    path.join(imagesDir, slug),
+    baseName,
+  );
   return `/animals/${slug}/${fileName}`;
 }
 
@@ -198,7 +216,8 @@ export function mapToAnimal(raw: RawAnimal, photos: string[]): Animal {
 
 type Skipped = { label: string; reason: string };
 
-async function syncPhotos(raw: RawAnimal, warnings: string[]): Promise<string[]> {
+/** Downloads and resizes one animal's photos into `imagesDir/{slug}/` (a staging folder). */
+async function syncPhotos(raw: RawAnimal, imagesDir: string, warnings: string[]): Promise<string[]> {
   const acf = Array.isArray(raw.acf) ? {} : (raw.acf ?? {});
   const sources: { baseName: string; resolve: () => Promise<string | null> }[] = [
     { baseName: "main", resolve: () => resolveFeaturedImageUrl(raw) },
@@ -206,8 +225,7 @@ async function syncPhotos(raw: RawAnimal, warnings: string[]): Promise<string[]>
     { baseName: "photo-3", resolve: () => resolveAcfImageUrl(acf.photo_3) },
   ];
 
-  await rm(path.join(IMAGES_DIR, raw.slug), { recursive: true, force: true });
-  await mkdir(path.join(IMAGES_DIR, raw.slug), { recursive: true });
+  await mkdir(path.join(imagesDir, raw.slug), { recursive: true });
 
   const photos: string[] = [];
   for (const { baseName, resolve } of sources) {
@@ -217,67 +235,122 @@ async function syncPhotos(raw: RawAnimal, warnings: string[]): Promise<string[]>
       continue;
     }
     try {
-      photos.push(await downloadImage(url, raw.slug, baseName));
+      photos.push(await downloadImage(url, imagesDir, raw.slug, baseName));
     } catch (err) {
       if (err instanceof UnreachableError) throw err;
-      warnings.push(`${raw.slug}: failed to download ${baseName} (${url}): ${(err as Error).message}`);
+      // A photo that exists but can't be fetched or read is a failed sync, not a missing photo:
+      // carrying on would replace the animal's good photo from the last sync with nothing.
+      throw new SyncError(`${raw.slug}: could not download or read ${baseName} (${url}): ${(err as Error).message}`);
     }
   }
   return photos;
 }
 
+async function exists(target: string): Promise<boolean> {
+  return access(target).then(
+    () => true,
+    () => false,
+  );
+}
+
+export type SyncResult = { animals: Animal[]; publishedCount: number; warnings: string[] };
+
+/**
+ * Syncs animals from WordPress into `root` (the project folder). Throws, having
+ * changed nothing, if WordPress can't be reached, any animal or photo can't be
+ * read, or the result isn't valid.
+ */
+export async function runSync(root: string = process.cwd()): Promise<SyncResult> {
+  const dataFile = path.join(root, "src", "data", "animals.json");
+  const imagesDir = path.join(root, "public", "animals");
+  const stagingDir = path.join(root, ".sync-staging");
+  const stagedImages = path.join(stagingDir, "animals");
+  const stagedData = path.join(stagingDir, "animals.json");
+
+  // A previous run that was killed may have left its staging folder behind.
+  await rm(stagingDir, { recursive: true, force: true });
+  await mkdir(stagedImages, { recursive: true });
+
+  try {
+    const rawAnimals = await fetchAllRawAnimals();
+    if (rawAnimals.length === 0) {
+      throw new SyncError(
+        "WordPress returned no published animals, so the existing data was not replaced with an empty list.\n" +
+          "Check that the animals are published and that WP_URL points at the right site.",
+      );
+    }
+
+    const animals: Animal[] = [];
+    const skipped: Skipped[] = [];
+    const warnings: string[] = [];
+
+    for (const raw of rawAnimals) {
+      const photos = await syncPhotos(raw, stagedImages, warnings);
+      try {
+        animals.push(mapToAnimal(raw, photos));
+      } catch (err) {
+        skipped.push({ label: raw.slug, reason: (err as Error).message });
+      }
+    }
+    if (skipped.length > 0) {
+      // Skipping would quietly remove a published animal from the site. Better to stop and say why.
+      throw new SyncError(
+        `${skipped.length} animal(s) could not be read:\n` +
+          skipped.map((s) => `  - ${s.label}: ${s.reason}`).join("\n") +
+          "\nFix them in WordPress and run the sync again.",
+      );
+    }
+
+    // Write the data file, then read it back and check it exactly as the site build will.
+    await writeFile(stagedData, JSON.stringify(animals, null, 2) + "\n");
+    try {
+      parseAnimals(JSON.parse(await readFile(stagedData, "utf8")), "the synced animals");
+    } catch (err) {
+      if (err instanceof AnimalDataError) throw new SyncError(err.message);
+      throw err;
+    }
+    // Every photo the data lists must exist, in all its sizes.
+    for (const animal of animals) {
+      for (const photo of animal.photos) {
+        const base = photo.slice("/animals/".length, -LARGE_SUFFIX.length); // e.g. "mochi/main"
+        for (const suffix of [LARGE_SUFFIX, CARD_SUFFIX, OG_SUFFIX]) {
+          if (!(await exists(path.join(stagedImages, base + suffix)))) {
+            throw new SyncError(`${animal.slug}: ${photo} is listed but ${base + suffix} was not written`);
+          }
+        }
+      }
+    }
+
+    await swapIn({ stagedImages, stagedData, imagesDir, dataFile });
+    return { animals, publishedCount: rawAnimals.length, warnings };
+  } finally {
+    await rm(stagingDir, { recursive: true, force: true });
+  }
+}
+
 async function main(): Promise<void> {
   console.log(`Syncing animals from ${WP_URL} ...`);
-
-  const rawAnimals = await fetchAllRawAnimals();
-  await mkdir(IMAGES_DIR, { recursive: true });
-
-  const animals: Animal[] = [];
-  const skipped: Skipped[] = [];
-  const warnings: string[] = [];
-
-  for (const raw of rawAnimals) {
-    try {
-      const photos = await syncPhotos(raw, warnings);
-      animals.push(mapToAnimal(raw, photos));
-    } catch (err) {
-      if (err instanceof SyncError) throw err;
-      skipped.push({ label: raw.slug, reason: (err as Error).message });
-      await rm(path.join(IMAGES_DIR, raw.slug), { recursive: true, force: true });
-    }
-  }
-
-  // Remove photo folders of animals that no longer exist (or were skipped).
-  const keep = new Set(animals.map((a) => a.slug));
-  for (const entry of await readdir(IMAGES_DIR, { withFileTypes: true })) {
-    if (entry.isDirectory() && !keep.has(entry.name)) {
-      await rm(path.join(IMAGES_DIR, entry.name), { recursive: true, force: true });
-    }
-  }
-
-  await mkdir(path.dirname(DATA_FILE), { recursive: true });
-  await writeFile(DATA_FILE, JSON.stringify(animals, null, 2) + "\n");
+  const { animals, publishedCount, warnings } = await runSync(process.cwd());
 
   const photoCount = animals.reduce((n, a) => n + a.photos.length, 0);
   const byStatus = (s: AdoptionStatus) => animals.filter((a) => a.status === s).length;
 
   console.log("\nSync complete");
-  console.log(`  Animals written : ${animals.length} (of ${rawAnimals.length} published)`);
+  console.log(`  Animals written : ${animals.length} (of ${publishedCount} published)`);
   console.log(
     `  By status       : ${byStatus("available")} available, ${byStatus("pending")} pending, ${byStatus("adopted")} adopted`,
   );
   console.log(`  Photos saved    : ${photoCount}`);
-  console.log(`  Data file       : ${path.relative(ROOT, DATA_FILE)}`);
+  console.log(`  Data file       : ${path.join("src", "data", "animals.json")}`);
   for (const a of animals) console.log(`    - ${a.name} (${a.slug}): ${a.photos.length} photo(s)`);
   for (const w of warnings) console.warn(`  ! ${w}`);
-  for (const s of skipped) console.warn(`  ! Skipped ${s.label}: ${s.reason}`);
-  if (skipped.length > 0) process.exitCode = 1;
 }
 
 // Only sync when run as a script (`npm run sync`), not when a test imports this file.
 if (/sync-animals\.[cm]?[jt]s$/.test(process.argv[1] ?? "")) {
   main().catch((err) => {
     console.error(`\nSync failed: ${err instanceof Error ? err.message : String(err)}`);
+    console.error("Nothing was changed: the previous photos and animals.json are untouched.");
     process.exit(1);
   });
 }
