@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { ApplicationStatusBadge } from "@/components/admin/ApplicationStatusBadge";
-import { formatDateTime } from "@/components/admin/ApplicationList";
 import {
   ADULT_OPTIONS,
   CHILD_OPTIONS,
@@ -14,10 +13,11 @@ import {
   LANDLORD_OPTIONS,
   OWNERSHIP_OPTIONS,
   optionLabel,
-} from "@/components/apply/options";
+} from "@/lib/application-options";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { fetchApplication, updateApplication } from "@/lib/applications-api";
+import { formatDateTime } from "@/lib/format";
 import { mailtoHref, telHref } from "@/lib/links";
 import {
   APPLICATION_STATUSES,

@@ -1,5 +1,5 @@
 import { RadioField, TextareaField } from "@/components/apply/fields";
-import { HAS_PETS_OPTIONS } from "@/components/apply/options";
+import { HAS_PETS_OPTIONS } from "@/lib/application-options";
 import type { StepProps } from "@/components/apply/types";
 
 export function StepPets({ form }: StepProps) {

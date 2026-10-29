@@ -1,7 +1,11 @@
-import type { Option } from "@/components/apply/fields";
+/**
+ * Labels for the application's answers, shared by the form and the admin pages.
+ * Typed by field, so a value added to the schema must get a label here.
+ */
 import type { ApplicationInput } from "@/lib/application-schema";
 
-// Typed by field so a value added to the schema must get a label here.
+export type Option = { value: string; label: string };
+
 type OptionsFor<K extends keyof ApplicationInput> = readonly {
   value: NonNullable<ApplicationInput[K]>;
   label: string;

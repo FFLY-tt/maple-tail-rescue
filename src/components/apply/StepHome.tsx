@@ -5,7 +5,7 @@ import {
   HOUSEHOLD_AGREES_OPTIONS,
   LANDLORD_OPTIONS,
   OWNERSHIP_OPTIONS,
-} from "@/components/apply/options";
+} from "@/lib/application-options";
 import type { StepProps } from "@/components/apply/types";
 
 export function StepHome({ form }: StepProps) {

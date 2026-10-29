@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
 
-export type Option = { value: string; label: string };
+import type { Option } from "@/lib/application-options";
 
 type FieldProps = {
   registration: UseFormRegisterReturn;

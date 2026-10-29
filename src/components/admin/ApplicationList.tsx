@@ -6,11 +6,8 @@ import { useEffect, useState } from "react";
 import { ApplicationStatusBadge } from "@/components/admin/ApplicationStatusBadge";
 import { Container } from "@/components/ui/Container";
 import { fetchApplicationSummaries, type ApplicationSummary } from "@/lib/applications-api";
+import { formatDateTime } from "@/lib/format";
 import { APPLICATION_STATUSES, APPLICATION_STATUS_LABELS, type ApplicationStatus } from "@/lib/application-mapping";
-
-export function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" });
-}
 
 type Load = { kind: "loading" } | { kind: "error" } | { kind: "done"; rows: ApplicationSummary[] };
 
