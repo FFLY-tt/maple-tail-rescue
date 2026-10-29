@@ -9,13 +9,22 @@ import {
 import type { StepProps } from "@/components/apply/types";
 
 export function StepHome({ form }: StepProps) {
-  const { register, watch, formState: { errors } } = form;
+  const { register, watch, clearErrors, setValue, formState: { errors } } = form;
   const renting = watch("ownership") === "rent";
 
   return (
     <div className="space-y-5">
       <RadioField
-        registration={register("ownership")}
+        registration={register("ownership", {
+          // The landlord question only applies to renters. Switching away forgets both the answer and
+          // any error, so neither is waiting for the person if they switch back.
+          onChange: (event) => {
+            if (event.target.value !== "rent") {
+              clearErrors("landlordPermission");
+              setValue("landlordPermission", null);
+            }
+          },
+        })}
         label="Do you own or rent your home?"
         options={OWNERSHIP_OPTIONS}
         error={errors.ownership?.message}

@@ -3,13 +3,21 @@ import { HAS_PETS_OPTIONS } from "@/components/apply/options";
 import type { StepProps } from "@/components/apply/types";
 
 export function StepPets({ form }: StepProps) {
-  const { register, watch, formState: { errors } } = form;
+  const { register, watch, clearErrors, setValue, formState: { errors } } = form;
   const hasPets = watch("hasPets") === "yes";
 
   return (
     <div className="space-y-5">
       <RadioField
-        registration={register("hasPets")}
+        registration={register("hasPets", {
+          // The description only applies to people who have pets; switching to "No" forgets it and any error.
+          onChange: (event) => {
+            if (event.target.value !== "yes") {
+              clearErrors("currentPets");
+              setValue("currentPets", "");
+            }
+          },
+        })}
         label="Do you have pets right now?"
         options={HAS_PETS_OPTIONS}
         error={errors.hasPets?.message}

@@ -127,6 +127,35 @@ describe("landlord permission (only when renting)", () => {
   });
 });
 
+describe("conditional rules run step by step, with later-step fields still missing", () => {
+  // The form validates one step at a time, so while the person is on step 2 the fields of steps 3 and 4
+  // don't exist yet. Zod skips object-level checks when a field has the wrong *type* (undefined), so these
+  // rules must not depend on the rest of the object being complete.
+  const step2Only = { ownership: "rent", adults: "2", children: "0", householdAgrees: "yes" };
+  const step3Only = { hasPets: "yes", experience: "Lots" };
+
+  it("asks for the landlord answer on step 2 even though steps 3 and 4 are empty", () => {
+    expect(errorFor(step2Only, "landlordPermission")).toBe("Please tell us whether your landlord allows pets");
+    expect(errorFor({ ownership: "rent" }, "landlordPermission")).toBeDefined();
+  });
+
+  it("is satisfied by an answer, or by owning, with the rest still missing", () => {
+    expect(errorFor({ ...step2Only, landlordPermission: "yes" }, "landlordPermission")).toBeUndefined();
+    expect(errorFor({ ...step2Only, ownership: "own" }, "landlordPermission")).toBeUndefined();
+  });
+
+  it("asks for the pet description on step 3 even though step 4 is empty", () => {
+    expect(errorFor(step3Only, "currentPets")).toBe("Please tell us a little about your pets");
+    expect(errorFor({ ...step3Only, currentPets: "A cat" }, "currentPets")).toBeUndefined();
+    expect(errorFor({ ...step3Only, hasPets: "no" }, "currentPets")).toBeUndefined();
+  });
+
+  it("does not ask about a landlord before the person has said whether they rent", () => {
+    expect(errorFor({}, "landlordPermission")).toBeUndefined();
+    expect(errorFor({ ownership: null }, "landlordPermission")).toBeUndefined();
+  });
+});
+
 describe("current pets (only when the household has pets)", () => {
   it("requires a description when there are pets", () => {
     expect(errorFor({ ...valid, hasPets: "yes" }, "currentPets")).toBe("Please tell us a little about your pets");

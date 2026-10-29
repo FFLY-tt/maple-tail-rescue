@@ -70,21 +70,19 @@ export const applicationSchema = z
       .min(10, "Please tell us a little more (at least 10 characters)")
       .max(1000, "Please keep this under 1000 characters"),
   })
-  .superRefine((value, ctx) => {
-    if (value.ownership === "rent" && !value.landlordPermission) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["landlordPermission"],
-        message: "Please tell us whether your landlord allows pets",
-      });
-    }
-    if (value.hasPets === "yes" && !value.currentPets) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["currentPets"],
-        message: "Please tell us a little about your pets",
-      });
-    }
+  // Two answers are only needed in some cases. These are .refine() with `when`, not .superRefine(),
+  // because Zod skips object-level checks once any field has a type failure, and the form validates
+  // one step at a time while the fields of later steps are still undefined. `when` runs the check
+  // regardless, as long as the answer that decides whether it applies is there.
+  .refine((value) => !!value.landlordPermission, {
+    path: ["landlordPermission"],
+    message: "Please tell us whether your landlord allows pets",
+    when: (payload) => (payload.value as { ownership?: unknown }).ownership === "rent",
+  })
+  .refine((value) => !!value.currentPets, {
+    path: ["currentPets"],
+    message: "Please tell us a little about your pets",
+    when: (payload) => (payload.value as { hasPets?: unknown }).hasPets === "yes",
   });
 
 export type ApplicationInput = z.infer<typeof applicationSchema>;
