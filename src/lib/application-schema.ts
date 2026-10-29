@@ -24,7 +24,10 @@ export const applicationSchema = z
       .refine((value) => /\p{L}/u.test(value), "Please enter your name using letters"),
     email: z
       .email("Please enter a valid email address, like name@example.com")
-      .max(200, "That email address is too long"),
+      .max(200, "That email address is too long")
+      // Zod's email check already refuses these; stated here so the rule doesn't depend on its
+      // default, and mirrored by the database (002_*.sql). They are what turns an address into a mailto: header.
+      .refine((value) => !/[?&]/.test(value), "Please enter a valid email address, like name@example.com"),
     phone: z
       .string()
       .trim()

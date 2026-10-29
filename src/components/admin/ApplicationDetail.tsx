@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { fetchApplication, updateApplication } from "@/lib/applications-api";
+import { mailtoHref, telHref } from "@/lib/links";
 import {
   APPLICATION_STATUSES,
   APPLICATION_STATUS_LABELS,
@@ -198,8 +199,8 @@ function Details({ application }: { application: StoredApplication }) {
       <Section
         title="Contact"
         rows={[
-          ["Email", <a key="email" href={`mailto:${a.email}`} className={LINK}>{a.email}</a>],
-          ["Phone", <a key="phone" href={`tel:${a.phone}`} className={LINK}>{a.phone}</a>],
+          ["Email", <a key="email" href={mailtoHref(a.email)} className={LINK}>{a.email}</a>],
+          ["Phone", <a key="phone" href={telHref(a.phone)} className={LINK}>{a.phone}</a>],
         ]}
       />
       <Section title="Home and household" rows={homeRows} />

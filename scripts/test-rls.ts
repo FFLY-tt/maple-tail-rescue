@@ -113,6 +113,7 @@ async function main() {
   const bad: [string, Partial<typeof validRow>][] = [
     ["name without letters ('645') is rejected", { full_name: "645" }],
     ["bad email is rejected", { email: "not-an-email" }],
+    ["email with ? or & is rejected", { email: "a@example.com?bcc=x@y.example" }],
     ["short phone number is rejected", { phone: "123" }],
     ["renting without a landlord answer is rejected", { ownership: "rent", landlord_permission: null }],
     ["has pets without a description is rejected", { has_pets: "yes", current_pets: null }],

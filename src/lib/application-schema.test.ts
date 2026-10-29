@@ -65,6 +65,13 @@ describe("email", () => {
     expect(errorFor({ ...valid, email }, "email")).toBe("Please enter a valid email address, like name@example.com");
   });
 
+  it.each(["a?bcc=x@example.com", "a&cc=x@example.com", "sam@example.com?bcc=x@y.com", "sam@example.com&x"])(
+    "rejects %s (the characters that add a header to a mailto: link)",
+    (email) => {
+      expect(errorFor({ ...valid, email }, "email")).toBe("Please enter a valid email address, like name@example.com");
+    },
+  );
+
   it("accepts a normal address", () => {
     expect(errorFor({ ...valid, email: "first.last+tag@mail.example.org" }, "email")).toBeUndefined();
   });

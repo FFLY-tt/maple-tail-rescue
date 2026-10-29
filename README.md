@@ -71,7 +71,7 @@ The site has no server at runtime. Animal data is baked in at build time, so cha
    This writes `src/data/animals.json` and saves resized versions of each photo (WebP, plus a JPEG for link previews) into `public/animals/`. The repo already contains a synced copy of the demo data, so you can skip steps 2–3 just to try the site.
 
    The sync is all-or-nothing: it builds everything in `.sync-staging/`, checks it, and only then swaps it in. If WordPress is down, an animal has an invalid field, a photo can't be downloaded or the result isn't valid, it stops with a message and the previous photos and `animals.json` are left untouched.
-4. **Supabase.** Copy `.env.example` to `.env.local` and fill in your project URL and **publishable** key. Never use the `service_role` / secret key in this project. Then paste `supabase/migrations/001_applications.sql` into the Supabase SQL Editor and run it. To use the admin area, create a user under Authentication → Users, turn off "Allow new users to sign up", and add yourself to the staff table using the commented example at the end of the migration file.
+4. **Supabase.** Copy `.env.example` to `.env.local` and fill in your project URL and **publishable** key. Never use the `service_role` / secret key in this project. Then run each file in `supabase/migrations/` in order (`001_…`, then `002_…`) by pasting it into the Supabase SQL Editor. To use the admin area, create a user under Authentication → Users, turn off "Allow new users to sign up", and add yourself to the staff table using the commented example at the end of the migration file.
 5. **Run it**
    ```bash
    npm run dev
