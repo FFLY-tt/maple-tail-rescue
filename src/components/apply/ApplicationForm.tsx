@@ -14,6 +14,7 @@ import { StepPets } from "@/components/apply/StepPets";
 import type { ApplyAnimal } from "@/components/apply/types";
 import { Button } from "@/components/ui/Button";
 import { submitApplication } from "@/lib/applications-api";
+import { HONEYPOT_FIELD, judgeHoneypot } from "@/lib/honeypot";
 import {
   APPLICATION_STEP_FIELDS,
   applicationSchema,
@@ -52,8 +53,12 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
   const [submitted, setSubmitted] = useState<ApplicationInput | null>(null);
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
-  // Honeypot: a real person never sees this field; simple bots fill it in.
+  // Bot trap (see lib/honeypot.ts) and the time the form appeared, to tell bots from autofill.
   const honeypotRef = useRef<HTMLInputElement>(null);
+  const shownAt = useRef(0);
+  useEffect(() => {
+    shownAt.current = performance.now();
+  }, []);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const moveFocus = useRef(false);
 
@@ -98,8 +103,18 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
     if (sending) return;
     setSendFailed(false);
 
-    // A bot filled the hidden field. Look successful, but store nothing.
-    if (honeypotRef.current?.value) return setSubmitted(values);
+    const elapsedMs = performance.now() - shownAt.current;
+    const verdict = judgeHoneypot(honeypotRef.current?.value ?? "", elapsedMs);
+    if (verdict === "bot") {
+      // Filled and far too fast: a bot. Look successful, store nothing. Only the
+      // browser console sees this: there is no server to log to.
+      console.warn(`Application dropped: bot trap filled ${Math.round(elapsedMs)} ms after the form appeared.`);
+      return setSubmitted(values);
+    }
+    if (verdict === "filled-but-human") {
+      // Probably autofill. Never lose a real application over it: send it.
+      console.warn(`Bot trap was filled, but ${Math.round(elapsedMs)} ms passed, so the application was sent.`);
+    }
 
     setSending(true);
     try {
@@ -150,11 +165,22 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
         {step === 2 && <StepPets form={form} />}
         {step === 3 && <StepAnimal form={form} animals={animals} />}
 
-        {/* Off-screen rather than display:none, which some bots skip. Not reachable by keyboard or screen reader. */}
-        <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+        {/* Bot trap. Off-screen rather than display:none (some bots skip hidden fields); inert
+            keeps it out of the tab order and the accessibility tree. The data-* attributes ask
+            password managers to leave it alone. */}
+        <div inert aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
           <label>
             Leave this field empty
-            <input ref={honeypotRef} type="text" name="website" tabIndex={-1} autoComplete="off" />
+            <input
+              ref={honeypotRef}
+              type="text"
+              name={HONEYPOT_FIELD}
+              tabIndex={-1}
+              autoComplete="off"
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-form-type="other"
+            />
           </label>
         </div>
       </div>
