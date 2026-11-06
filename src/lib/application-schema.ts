@@ -4,6 +4,10 @@
  */
 import { z } from "zod";
 
+// Zod probes for `new Function` support, which the site's Content Security Policy (public/_headers)
+// forbids; the blocked probe is harmless but is reported as a violation. Validation is unchanged.
+z.config({ jitless: true });
+
 export const HOME_OWNERSHIP = ["own", "rent"] as const;
 export const YES_NO = ["yes", "no"] as const;
 export const ADULT_COUNTS = ["1", "2", "3", "4-plus"] as const;
