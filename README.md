@@ -1,19 +1,17 @@
 # Maple Tail Rescue
 
+**Live demo: https://maple-tail-rescue.pages.dev**
+
 A demo adoption website for a **fictional foster-based dog and cat rescue in Toronto**. I built it as a volunteer-project pitch for real rescues: a fast public site where adopters can browse animals and apply, with each application emailed straight to the rescue. The rescue, its animals and its social accounts are all made up.
 
 ## Screenshots
 
-_Screenshots coming soon._
-
-<!--
-Suggested set, saved under docs/screenshots/:
-- Home page with the carousel
-- Animals list with filters
-- Animal detail page
-- Application form (mobile)
-- Admin applications list
--->
+| | Desktop | Phone |
+| --- | --- | --- |
+| Home | ![Home on desktop](docs/screenshots/home-desktop.png) | ![Home on a phone](docs/screenshots/home-phone.png) |
+| Animals list | ![Animals list on desktop](docs/screenshots/animals-desktop.png) | ![Animals list on a phone](docs/screenshots/animals-phone.png) |
+| Animal detail | ![Animal detail on desktop](docs/screenshots/animal-detail-desktop.png) | ![Animal detail on a phone](docs/screenshots/animal-detail-phone.png) |
+| Apply form | ![Apply form on desktop](docs/screenshots/apply-desktop.png) | ![Apply form on a phone](docs/screenshots/apply-phone.png) |
 
 ## What it does
 
@@ -27,14 +25,19 @@ Suggested set, saved under docs/screenshots/:
 | Content | Headless WordPress (LocalWP) with Advanced Custom Fields |
 | Data pipeline | `npm run sync` script: WordPress REST API → `src/data/animals.json` + photos in `public/animals/` |
 | Frontend | Next.js 16 (App Router, **static export**), React 19, TypeScript, Tailwind CSS 4 |
+| Hosting | Cloudflare Pages (see [DEPLOY.md](DEPLOY.md)) |
 | Forms | React Hook Form + Zod |
 | Applications | Formspree (emails each application to the rescue), called from the browser |
+
+Headless WordPress → sync script → Next.js static export on Cloudflare Pages; applications are emailed to the rescue through Formspree.
 
 ```
 WordPress + ACF ──sync script──▶ animals.json + photos ──next build──▶ static site (out/)
                                                                            │
                                          browser ──application──▶ Formspree ──email──▶ the rescue
 ```
+
+**Why no database?** A small volunteer rescue can't maintain one. An email in the inbox is something they already know how to handle; accounts, backups, security patches and an admin area are not.
 
 The site has no server and no database at runtime. Animal data is baked in at build time, so changes in WordPress show up after running `npm run sync` and rebuilding.
 
@@ -103,7 +106,6 @@ It uses no secrets.
 
 ## Limitations
 
-- Not deployed; there is no live demo yet.
 - **Tests cover the logic and the main flows, not everything.** There are unit tests for the pure logic, and end-to-end tests for the public application flow and the bot trap. The carousel's pause and reduced-motion behaviour is untested.
 - **Spam protection is light.** A hidden bot-trap field catches simple bots (it drops a submission only if the trap is filled *and* the form was sent within 3 seconds, so autofill can't lose a real application; Formspree's own spam filtering applies on top). There is no CAPTCHA, so a determined script that knows the public endpoint can still send emails, within Formspree's plan limits. Dropped bot submissions are only logged to the visitor's browser console; there is no server-side record.
 - **Applications live in an inbox.** There is no status tracking or search beyond the rescue's email; Formspree also keeps a copy of each submission in its dashboard, according to the plan. Applicants don't get an automatic confirmation; the success screen says a volunteer will email them, which is a manual step.
