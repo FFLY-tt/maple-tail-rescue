@@ -1,5 +1,5 @@
 /**
- * Labels for the application's answers, shared by the form and the admin pages.
+ * Labels for the application's answers, shared by the form and the email sent to the rescue (formspree.ts).
  * Typed by field, so a value added to the schema must get a label here.
  */
 import type { ApplicationInput } from "@/lib/application-schema";

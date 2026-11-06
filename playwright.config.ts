@@ -2,11 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 const PORT = 4321;
 
-// The Supabase address is fake on purpose: the tests intercept the one request the
-// app makes, so nothing here (or in .env.local) can reach a real database.
+// The Formspree address is fake on purpose: the tests intercept the one request the
+// app makes, so nothing here (or in .env.local) can send a real email.
 const TEST_ENV = {
-  NEXT_PUBLIC_SUPABASE_URL: "https://e2e-test.supabase.co",
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: "e2e-test-publishable-key",
+  NEXT_PUBLIC_FORMSPREE_ENDPOINT: "https://formspree.io/f/e2etest",
   // This build is for tests only, so skip the production-config guard (see src/lib/env-check.ts).
   ALLOW_PLACEHOLDER_ENV: "1",
 };

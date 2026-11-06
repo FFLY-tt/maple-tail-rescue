@@ -13,7 +13,7 @@ import { StepIndicator } from "@/components/apply/StepIndicator";
 import { StepPets } from "@/components/apply/StepPets";
 import type { ApplyAnimal } from "@/components/apply/types";
 import { Button } from "@/components/ui/Button";
-import { submitApplication } from "@/lib/applications-api";
+import { submitApplication } from "@/lib/formspree";
 import { HONEYPOT_FIELD, judgeHoneypot } from "@/lib/honeypot";
 import {
   APPLICATION_STEP_FIELDS,
@@ -106,7 +106,7 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
     const elapsedMs = performance.now() - shownAt.current;
     const verdict = judgeHoneypot(honeypotRef.current?.value ?? "", elapsedMs);
     if (verdict === "bot") {
-      // Filled and far too fast: a bot. Look successful, store nothing. Only the
+      // Filled and far too fast: a bot. Look successful, send nothing. Only the
       // browser console sees this: there is no server to log to.
       console.warn(`Application dropped: bot trap filled ${Math.round(elapsedMs)} ms after the form appeared.`);
       return setSubmitted(values);
@@ -187,9 +187,8 @@ export function ApplicationForm({ animals }: { animals: readonly ApplyAnimal[] }
 
       {step === LAST_STEP && (
         <p className="text-sm text-muted">
-          <strong className="font-semibold text-foreground">Your privacy:</strong> we collect the name,
-          contact details and answers above. We only use them to review this adoption application, and
-          only Maple Tail Rescue staff can see them.
+          <strong className="font-semibold text-foreground">Your privacy:</strong> your application is
+          sent by email to Maple Tail Rescue. We only use it to review this adoption.
         </p>
       )}
 

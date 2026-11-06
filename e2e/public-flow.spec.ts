@@ -19,13 +19,13 @@ test("visitor browses, filters, opens an animal and sends an application", async
   test.skip(!cat, "needs at least one cat that is not adopted in src/data/animals.json");
   const animal = cat!;
 
-  // Stand in for Supabase: record what the app sends and answer "created". The real database is never contacted.
+  // Stand in for Formspree: record what the app sends and answer "ok". No real email is ever sent.
   const inserts: Record<string, unknown>[] = [];
-  await page.route("https://e2e-test.supabase.co/rest/v1/applications**", async (route) => {
+  await page.route("https://formspree.io/f/e2etest", async (route) => {
     const request = route.request();
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
     inserts.push(request.postDataJSON());
-    return route.fulfill({ status: 201, headers: CORS, body: "" });
+    return route.fulfill({ status: 200, headers: { ...CORS, "content-type": "application/json" }, body: '{"ok":true}' });
   });
 
   // Home
@@ -96,22 +96,58 @@ test("visitor browses, filters, opens an animal and sends an application", async
   await expect(page.getByRole("link", { name: "Back to home" })).toBeVisible();
   await expect(page.getByText("Keep browsing animals")).toHaveCount(0);
 
-  // Exactly one insert went out, in the database's column names.
+  // Exactly one request went out, with readable fields and the subject and reply-to Formspree uses.
   expect(inserts).toHaveLength(1);
   expect(inserts[0]).toEqual({
-    full_name: "Sam Lee",
-    email: "sam@example.com",
-    phone: "416-555-0123",
-    ownership: "own",
-    landlord_permission: null,
-    adults: "2",
-    children: "0",
-    household_agrees: "yes",
-    has_pets: "no",
-    current_pets: null,
-    experience: "Grew up with cats and dogs.",
-    animal_slug: animal.slug,
-    animal_name: animal.name,
-    why_interested: "We have the time and space for a friend.",
+    _subject: `Adoption application: ${animal.name}`,
+    _replyto: "sam@example.com",
+    _gotcha: "",
+    Animal: animal.name,
+    "Full name": "Sam Lee",
+    Email: "sam@example.com",
+    Phone: "416-555-0123",
+    "Own or rent": "I own my home",
+    Adults: "2 adults",
+    Children: "No children",
+    "Everyone at home agrees": "Yes, everyone is on board",
+    "Has pets now": "No",
+    "Experience with pets": "Grew up with cats and dogs.",
+    "Why they want to adopt": "We have the time and space for a friend.",
   });
+});
+
+test("a failed send keeps the answers and offers a retry; the second try succeeds", async ({ page }) => {
+  let calls = 0;
+  await page.route("https://formspree.io/f/e2etest", async (route) => {
+    if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
+    calls += 1;
+    if (calls === 1) return route.fulfill({ status: 500, headers: CORS, body: "{}" });
+    return route.fulfill({ status: 200, headers: { ...CORS, "content-type": "application/json" }, body: '{"ok":true}' });
+  });
+
+  await page.goto("/apply");
+  await page.getByLabel("Full name").fill("Sam Lee");
+  await page.getByLabel("Email").fill("sam@example.com");
+  await page.getByLabel("Phone number").fill("416-555-0123");
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByLabel("I own my home").check();
+  await page.getByLabel("How many adults live in your home?").selectOption("2");
+  await page.getByLabel("How many children live in your home?").selectOption("0");
+  await page.getByLabel("Yes, everyone is on board").check();
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByLabel("No", { exact: true }).check();
+  await page.getByLabel("Your experience with pets").fill("Grew up with dogs.");
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByLabel("Which animal are you applying for?").selectOption("general");
+  await page.getByLabel("Why are you interested in adopting?").fill("We have the time and space for a friend.");
+  await page.getByRole("button", { name: "Submit application" }).click();
+
+  await expect(page.getByText("we couldn’t send your application")).toBeVisible();
+  await expect(page.getByLabel("Why are you interested in adopting?")).toHaveValue(
+    "We have the time and space for a friend.",
+  );
+
+  await page.getByRole("button", { name: "Submit application" }).click();
+  await expect(page.getByRole("heading", { name: "Thank you, Sam!" })).toBeVisible();
+  expect(calls).toBe(2);
 });

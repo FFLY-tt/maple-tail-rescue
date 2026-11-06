@@ -7,11 +7,10 @@
 /** Set to "1" to skip the check, e.g. in CI, where the build uses dummy values. */
 export const SKIP_FLAG = "ALLOW_PLACEHOLDER_ENV";
 
-const REQUIRED = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SITE_URL"] as const;
-const URL_VARS = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SITE_URL"] as const;
+const REQUIRED = ["NEXT_PUBLIC_FORMSPREE_ENDPOINT", "NEXT_PUBLIC_SITE_URL"] as const;
 
 /** Text copied from .env.example or the defaults in src/content/site.ts. */
-const PLACEHOLDER_TEXT = /your-project-ref|your-publishable-key|changeme|placeholder|replace[-_ ]me/i;
+const PLACEHOLDER_TEXT = /your-form-id|changeme|placeholder|replace[-_ ]me/i;
 /** Reserved, example and local hosts: fine for development, wrong for a deployed site. */
 const PLACEHOLDER_HOST = /(^|\.)(example\.(com|org|net)|[^.]+\.example|localhost)$|^127\.0\.0\.1$/i;
 
@@ -29,17 +28,6 @@ function urlProblem(name: string, value: string): string | null {
   return null;
 }
 
-/** True for a Supabase secret / service_role key, which must never be shipped to browsers. */
-function isSecretKey(key: string): boolean {
-  if (key.startsWith("sb_secret_")) return true;
-  try {
-    const payload = JSON.parse(atob(key.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return payload.role === "service_role";
-  } catch {
-    return false; // not a JWT, so nothing more to check
-  }
-}
-
 /** Everything wrong with the environment, one message per problem. Empty when it is fine. */
 export function findEnvProblems(env: Record<string, string | undefined>): string[] {
   const problems: string[] = [];
@@ -48,17 +36,10 @@ export function findEnvProblems(env: Record<string, string | undefined>): string
     const value = env[name]?.trim();
     if (!value) problems.push(`${name} is not set`);
     else if (PLACEHOLDER_TEXT.test(value)) problems.push(`${name} still has a placeholder value ("${value}")`);
-    else if ((URL_VARS as readonly string[]).includes(name)) {
+    else {
       const problem = urlProblem(name, value);
       if (problem) problems.push(problem);
     }
-  }
-
-  const key = env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-  if (key && isSecretKey(key)) {
-    problems.push(
-      "NEXT_PUBLIC_SUPABASE_ANON_KEY is a secret / service_role key, which would be published in the site's JavaScript. Use the publishable (anon) key",
-    );
   }
 
   return problems;

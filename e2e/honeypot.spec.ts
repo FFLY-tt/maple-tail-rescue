@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const TRAP = 'input[name="office_note_2"]';
+const TRAP = 'input[name="_gotcha"]';
 const T0 = new Date("2026-01-01T09:00:00Z");
 
 const CORS = {
@@ -9,14 +9,14 @@ const CORS = {
   "access-control-allow-methods": "POST, OPTIONS",
 };
 
-/** Intercepts the Supabase insert; returns the list of bodies the app sent. */
+/** Intercepts the Formspree request; returns the list of bodies the app sent. */
 async function captureInserts(page: Page) {
   const inserts: unknown[] = [];
-  await page.route("https://e2e-test.supabase.co/rest/v1/applications**", async (route) => {
+  await page.route("https://formspree.io/f/e2etest", async (route) => {
     const request = route.request();
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
     inserts.push(request.postDataJSON());
-    return route.fulfill({ status: 201, headers: CORS, body: "" });
+    return route.fulfill({ status: 200, headers: { ...CORS, "content-type": "application/json" }, body: '{"ok":true}' });
   });
   return inserts;
 }
@@ -90,6 +90,8 @@ test.describe("bot trap on the application form", () => {
 
     await expect(page.getByRole("heading", { name: "Thank you, Sam!" })).toBeVisible();
     expect(inserts).toHaveLength(1);
+    // The filled trap itself is not forwarded: Formspree would discard the real application.
+    expect(inserts[0]).toMatchObject({ _gotcha: "" });
     expect(warnings.some((text) => text.includes("so the application was sent"))).toBe(true);
   });
 

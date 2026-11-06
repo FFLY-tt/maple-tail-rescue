@@ -33,7 +33,7 @@ jobs:
             echo "::error::The production build should have failed without NEXT_PUBLIC_* variables"
             exit 1
           fi
-      # CI has no real Supabase project or site address (and no secrets, no test:rls), so the
+      # CI has no real Formspree form or site address (and no secrets), so the
       # build uses the explicit flag instead. Never deploy a build made this way.
       - run: npm run build
         env:
@@ -50,7 +50,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      # Builds the site with a fake Supabase address and intercepts the insert (see playwright.config.ts).
+      # Builds the site with a fake Formspree address and intercepts the request (see playwright.config.ts).
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()
